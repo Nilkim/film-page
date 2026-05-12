@@ -1,34 +1,17 @@
 // FilmPage 커뮤니티 사이트 — MVP 홈
 //
-// 이번 단계는 사이트 뼈대만 — 사이트 소개 + "커팅 시작하기" 외부 링크.
-// 다음 단계 (별도 PR):
-//   - 게시글 피드 (Supabase posts 테이블)
-//   - Google OAuth 로그인 (Supabase Auth)
-//   - 게시글 작성 (인증 필요)
-// FilmCutting URL은 환경변수로 추후 분리, 일단 inline.
-const CUTTING_APP_URL = "https://filmcutting.netlify.app";
+// 헤더는 별도 Server Component(Header.tsx)로 분리 — Supabase 세션을 읽어
+// 로그인 상태를 표시.
+// 다음 단계: 게시글 피드, 작성 페이지, posts 테이블 schema.
+import Header from '@/components/Header';
+
+const CUTTING_APP_URL =
+  process.env.NEXT_PUBLIC_CUTTING_URL ?? 'https://filmcutting.netlify.app';
 
 export default function Home() {
   return (
     <div className="flex flex-1 flex-col bg-zinc-50 dark:bg-black">
-      {/* 상단 네비 */}
-      <header className="border-b border-zinc-200 dark:border-zinc-800">
-        <div className="mx-auto flex w-full max-w-5xl items-center justify-between px-6 py-4">
-          <h1 className="text-lg font-bold text-zinc-900 dark:text-zinc-50">
-            FilmPage
-          </h1>
-          <nav className="flex gap-4 text-sm text-zinc-600 dark:text-zinc-400">
-            <button
-              type="button"
-              className="rounded-md px-3 py-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-900 disabled:opacity-50"
-              disabled
-              title="로그인 기능은 다음 단계에 추가됩니다"
-            >
-              로그인
-            </button>
-          </nav>
-        </div>
-      </header>
+      <Header />
 
       {/* Hero */}
       <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col items-center justify-center px-6 py-16">
