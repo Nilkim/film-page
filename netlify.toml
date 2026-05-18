@@ -1,0 +1,17 @@
+# Netlify build configuration for film-page (Next.js 16).
+#
+# Netlify는 package.json + next.config.ts를 감지해 @netlify/plugin-nextjs를
+# 자동 적용한다. 이 파일은 명시화 + Node 버전 고정 용도.
+
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  # Next.js 16 권장 Node 버전 (LTS 20).
+  NODE_VERSION = "20"
+
+# Next.js Runtime — App Router / Server Actions / Route Handlers 지원.
+# Netlify가 자동 설치하지만 명시.
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
