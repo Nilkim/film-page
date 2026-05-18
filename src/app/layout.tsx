@@ -28,7 +28,13 @@ export default function RootLayout({
       lang="ko"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      {/*
+        suppressHydrationWarning: ColorZilla 같은 일부 브라우저 확장이 body에
+        `cz-shortcut-listen` 등 속성을 주입해 hydration mismatch가 발생하는
+        걸 무시. 해당 노드의 속성 mismatch만 억제하며 자식 트리의 진짜
+        버그는 그대로 보고됨.
+      */}
+      <body suppressHydrationWarning className="min-h-full flex flex-col">{children}</body>
     </html>
   );
 }

@@ -1,53 +1,61 @@
-// FilmPage 커뮤니티 사이트 — MVP 홈
+// 메인 페이지 — 카드 그리드.
 //
-// 헤더는 별도 Server Component(Header.tsx)로 분리 — Supabase 세션을 읽어
-// 로그인 상태를 표시.
-// 다음 단계: 게시글 피드, 작성 페이지, posts 테이블 schema.
+// 첫 번째 카드는 항상 "직접 만들기"(FilmCutting 외부 에디터 진입),
+// 그 다음부터는 film_page_posts에서 최신순으로 가져온 게시글들.
+//
+// Server Component — Supabase server client로 직접 쿼리. RLS의
+// select_all 정책 덕분에 비로그인 사용자도 피드를 볼 수 있음.
+import Link from 'next/link';
 import Header from '@/components/Header';
+import CreateCard from '@/components/CreateCard';
+import PostCard from '@/components/PostCard';
+import { createClient } from '@/lib/supabase/server';
+import { TABLE, type Post } from '@/lib/db';
 
-const CUTTING_APP_URL =
-  process.env.NEXT_PUBLIC_CUTTING_URL ?? 'https://filmcutting.netlify.app';
+export default async function Home() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  const { data: posts } = await supabase
+    .from(TABLE.POSTS)
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(60);
 
-export default function Home() {
+  const list: Post[] = (posts as Post[] | null) ?? [];
+
   return (
     <div className="flex flex-1 flex-col bg-zinc-50 dark:bg-black">
       <Header />
 
-      {/* Hero */}
-      <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col items-center justify-center px-6 py-16">
-        <section className="flex flex-col items-center gap-6 text-center">
-          <h2 className="text-4xl font-bold leading-tight text-zinc-900 dark:text-zinc-50 sm:text-5xl">
-            필름 커팅으로 만든 작품,
-            <br />
-            여기서 자랑해요.
+      <main className="mx-auto w-full max-w-5xl flex-1 px-6 py-10">
+        <div className="mb-6 flex items-center justify-between">
+          <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50">
+            작품 둘러보기
           </h2>
-          <p className="max-w-xl text-base leading-relaxed text-zinc-600 dark:text-zinc-400 sm:text-lg">
-            도면을 그려서 주문하고, 만든 작품을 사진과 함께 공유하는 커뮤니티.
-            다른 사람의 도면을 보고 영감을 받거나, 같은 도면으로 새 주문을
-            만들어 볼 수도 있어요.
+          {user && (
+            <Link
+              href="/posts/new"
+              className="rounded-md bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-zinc-700 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200"
+            >
+              + 새 글
+            </Link>
+          )}
+        </div>
+
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
+          <CreateCard />
+          {list.map((p) => (
+            <PostCard key={p.id} post={p} currentUserId={user?.id ?? null} />
+          ))}
+        </div>
+
+        {list.length === 0 && (
+          <p className="mt-8 text-center text-sm text-zinc-500 dark:text-zinc-400">
+            아직 게시글이 없어요. {user ? '첫 글을 작성해 보세요!' : '로그인 후 첫 글을 남길 수 있어요.'}
           </p>
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <a
-              href={CUTTING_APP_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center justify-center rounded-full bg-zinc-900 px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-zinc-700 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200"
-            >
-              커팅 시작하기 →
-            </a>
-            <button
-              type="button"
-              className="inline-flex items-center justify-center rounded-full border border-zinc-300 px-6 py-3 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-900"
-              disabled
-              title="게시판은 다음 단계에 추가됩니다"
-            >
-              작품 둘러보기 (준비 중)
-            </button>
-          </div>
-        </section>
+        )}
       </main>
 
-      {/* Footer */}
       <footer className="border-t border-zinc-200 py-6 text-center text-xs text-zinc-500 dark:border-zinc-800 dark:text-zinc-500">
         © {new Date().getFullYear()} Cotyledon · 필름 커팅 작품 커뮤니티
       </footer>
