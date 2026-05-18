@@ -276,7 +276,11 @@ function shouldProxy(rawUrl: string): boolean {
 }
 
 function toProxyUrl(rawUrl: string): string {
-  return `/api/image-proxy?url=${encodeURIComponent(rawUrl)}`;
+  // base64url 인코딩 — query string에 외부 도메인(pstatic.net 등)이 드러나지 않아
+  // 광고차단기 / 추적차단 확장 / Chrome ORB의 query 분석 기반 차단을 모두 우회.
+  // server-only(extract.ts)에서만 호출되므로 Node Buffer 사용 안전.
+  const u = Buffer.from(rawUrl, 'utf-8').toString('base64url');
+  return `/api/image-proxy?u=${u}`;
 }
 
 function postProcessImages(html: string): string {

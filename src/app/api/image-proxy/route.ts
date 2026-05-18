@@ -26,7 +26,20 @@ const MAX_BYTES = 5 * 1024 * 1024;
 const TIMEOUT_MS = 8_000;
 
 export async function GET(req: NextRequest) {
-  const raw = req.nextUrl.searchParams.get('url');
+  // 두 가지 파라미터 모두 지원 — backward 호환:
+  //   ?u=BASE64URL  (신규, 광고차단/추적차단/ORB query 분석 우회용)
+  //   ?url=plain    (기존, 이미 캐시된 페이지 호환)
+  const u = req.nextUrl.searchParams.get('u');
+  let raw: string | null = null;
+  if (u) {
+    try {
+      raw = Buffer.from(u, 'base64url').toString('utf-8');
+    } catch {
+      return new NextResponse('invalid u', { status: 400 });
+    }
+  } else {
+    raw = req.nextUrl.searchParams.get('url');
+  }
   if (!raw) return new NextResponse('url required', { status: 400 });
 
   let target: URL;
