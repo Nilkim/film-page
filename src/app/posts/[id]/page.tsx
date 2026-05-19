@@ -16,12 +16,6 @@ import { findPackageByCode } from '@/lib/orders';
 import LikeButton from '@/components/LikeButton';
 import CommentsSection from '@/components/CommentsSection';
 
-// 매 요청 SSR + Edge/CDN 캐시 비활성. 본문 추출 로직(extract.ts/og.ts/image-proxy
-// rewrite) 코드 변경이 즉시 반영되어야 함 — 캐시된 응답이 옛 src를 들고 있으면
-// 이미지가 ORB로 막힘.
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
-
 export default async function PostDetailPage(props: PageProps<'/posts/[id]'>) {
   const { id } = await props.params;
 

@@ -26,20 +26,7 @@ const MAX_BYTES = 5 * 1024 * 1024;
 const TIMEOUT_MS = 8_000;
 
 export async function GET(req: NextRequest) {
-  // 두 가지 파라미터 모두 지원 — backward 호환:
-  //   ?u=BASE64URL  (신규, 광고차단/추적차단/ORB query 분석 우회용)
-  //   ?url=plain    (기존, 이미 캐시된 페이지 호환)
-  const u = req.nextUrl.searchParams.get('u');
-  let raw: string | null = null;
-  if (u) {
-    try {
-      raw = Buffer.from(u, 'base64url').toString('utf-8');
-    } catch {
-      return new NextResponse('invalid u', { status: 400 });
-    }
-  } else {
-    raw = req.nextUrl.searchParams.get('url');
-  }
+  const raw = req.nextUrl.searchParams.get('url');
   if (!raw) return new NextResponse('url required', { status: 400 });
 
   let target: URL;
@@ -115,9 +102,6 @@ export async function GET(req: NextRequest) {
         'content-type': contentType,
         // nosniff — 브라우저가 content-type만 믿게 해서 ORB로 차단되는 거 방지.
         'x-content-type-options': 'nosniff',
-        // CORP — 어떤 cross-origin embedding에도 명시적 허락. 일부 브라우저의
-        // 엄격한 ORB 정책에서 추가 보호막 역할.
-        'cross-origin-resource-policy': 'cross-origin',
         // 1일 캐시 — 같은 이미지 반복 요청 시 우리 서버 안 거치게.
         'cache-control': 'public, max-age=86400, s-maxage=86400',
       },

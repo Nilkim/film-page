@@ -10,13 +10,9 @@ import PostCardActions from './PostCardActions';
 export default function PostCard({
   post,
   currentUserId,
-  likeCount = 0,
-  commentCount = 0,
 }: {
   post: Post;
   currentUserId?: string | null;
-  likeCount?: number;
-  commentCount?: number;
 }) {
   const thumb = post.cover_image ?? post.og_image ?? post.image_urls?.[0] ?? null;
   const title = post.title || post.og_title || '(제목 없음)';
@@ -53,18 +49,8 @@ export default function PostCard({
           <div className="line-clamp-1 text-sm font-medium text-zinc-900 dark:text-zinc-50">
             {title}
           </div>
-          <div className="mt-0.5 flex items-center justify-between gap-2">
-            <span className="font-mono text-[10px] tracking-wide text-zinc-500 dark:text-zinc-400">
-              {post.package_code || (post.order_code ? `주문 ${post.order_code}` : '')}
-            </span>
-            <span className="flex items-center gap-2 text-[11px] text-zinc-500 dark:text-zinc-400">
-              <span className="inline-flex items-center gap-0.5" aria-label={`좋아요 ${likeCount}`}>
-                <HeartIcon /> {likeCount}
-              </span>
-              <span className="inline-flex items-center gap-0.5" aria-label={`댓글 ${commentCount}`}>
-                <CommentIcon /> {commentCount}
-              </span>
-            </span>
+          <div className="mt-0.5 font-mono text-[10px] tracking-wide text-zinc-500 dark:text-zinc-400">
+            {post.package_code || (post.order_code ? `주문 ${post.order_code}` : '')}
           </div>
         </div>
       </Link>
@@ -72,41 +58,5 @@ export default function PostCard({
       {/* 본인 글에만 표시. sibling 배치라 카드 Link 클릭과 충돌 없음. */}
       {isOwner && <PostCardActions postId={post.id} />}
     </div>
-  );
-}
-
-function HeartIcon() {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="h-3 w-3"
-      aria-hidden="true"
-    >
-      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-    </svg>
-  );
-}
-
-function CommentIcon() {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="h-3 w-3"
-      aria-hidden="true"
-    >
-      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-    </svg>
   );
 }

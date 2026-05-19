@@ -23,23 +23,6 @@ export default async function Home() {
 
   const list: Post[] = (posts as Post[] | null) ?? [];
 
-  // 카드별 좋아요/댓글 카운트 — N+1 회피 위해 모든 post_id로 IN 조회 후 클라이언트 group.
-  const postIds = list.map((p) => p.id);
-  const counts = new Map<string, { likes: number; comments: number }>();
-  if (postIds.length > 0) {
-    const [likesRes, commentsRes] = await Promise.all([
-      supabase.from(TABLE.LIKES).select('post_id').in('post_id', postIds),
-      supabase.from(TABLE.COMMENTS).select('post_id').in('post_id', postIds),
-    ]);
-    const inc = (id: string, key: 'likes' | 'comments') => {
-      const cur = counts.get(id) ?? { likes: 0, comments: 0 };
-      cur[key] += 1;
-      counts.set(id, cur);
-    };
-    (likesRes.data as { post_id: string }[] | null)?.forEach((r) => inc(r.post_id, 'likes'));
-    (commentsRes.data as { post_id: string }[] | null)?.forEach((r) => inc(r.post_id, 'comments'));
-  }
-
   return (
     <div className="flex flex-1 flex-col bg-zinc-50 dark:bg-black">
       <Header />
@@ -61,18 +44,9 @@ export default async function Home() {
 
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
           <CreateCard />
-          {list.map((p) => {
-            const c = counts.get(p.id);
-            return (
-              <PostCard
-                key={p.id}
-                post={p}
-                currentUserId={user?.id ?? null}
-                likeCount={c?.likes ?? 0}
-                commentCount={c?.comments ?? 0}
-              />
-            );
-          })}
+          {list.map((p) => (
+            <PostCard key={p.id} post={p} currentUserId={user?.id ?? null} />
+          ))}
         </div>
 
         {list.length === 0 && (
