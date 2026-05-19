@@ -15,13 +15,19 @@ import { TABLE, type Post } from '@/lib/db';
 export default async function Home() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
+  // nested count로 N+1 회피 — 한 번에 좋아요/댓글 카운트까지 같이 가져옴.
+  // Supabase JS는 reverse relationship을 자동 감지(post_id FK 기반).
   const { data: posts } = await supabase
     .from(TABLE.POSTS)
-    .select('*')
+    .select('*, film_page_likes(count), film_page_comments(count)')
     .order('created_at', { ascending: false })
     .limit(60);
 
-  const list: Post[] = (posts as Post[] | null) ?? [];
+  type PostWithCounts = Post & {
+    film_page_likes?: { count: number }[];
+    film_page_comments?: { count: number }[];
+  };
+  const list: PostWithCounts[] = (posts as PostWithCounts[] | null) ?? [];
 
   return (
     <div className="flex flex-1 flex-col bg-zinc-50 dark:bg-black">
@@ -45,7 +51,13 @@ export default async function Home() {
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
           <CreateCard />
           {list.map((p) => (
-            <PostCard key={p.id} post={p} currentUserId={user?.id ?? null} />
+            <PostCard
+              key={p.id}
+              post={p}
+              currentUserId={user?.id ?? null}
+              likeCount={p.film_page_likes?.[0]?.count ?? 0}
+              commentCount={p.film_page_comments?.[0]?.count ?? 0}
+            />
           ))}
         </div>
 
