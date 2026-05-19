@@ -10,6 +10,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { updatePost } from '@/app/posts/actions';
 import type { Post } from '@/lib/db';
+import { proxyIfNeeded } from '@/lib/imageProxy';
 
 type OgState = {
   title: string;
@@ -159,7 +160,7 @@ export default function EditPostForm({ post }: { post: Post }) {
         <div className="flex gap-3 overflow-hidden rounded-md border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950">
           {og.image && (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={og.image} alt="" className="h-20 w-32 flex-none rounded object-cover" />
+            <img src={proxyIfNeeded(og.image) ?? ''} alt="" className="h-20 w-32 flex-none rounded object-cover" />
           )}
           <div className="min-w-0">
             <div className="line-clamp-1 text-sm font-medium text-zinc-900 dark:text-zinc-50">

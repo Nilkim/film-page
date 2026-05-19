@@ -5,6 +5,7 @@
 import Link from 'next/link';
 import type { Post } from '@/lib/db';
 import { POST_TYPE } from '@/lib/db';
+import { proxyIfNeeded } from '@/lib/imageProxy';
 import PostCardActions from './PostCardActions';
 
 export default function PostCard({
@@ -14,7 +15,13 @@ export default function PostCard({
   post: Post;
   currentUserId?: string | null;
 }) {
-  const thumb = post.cover_image ?? post.og_image ?? post.image_urls?.[0] ?? null;
+  // cover_image는 Supabase Storage URL이라 직접 표시(화이트리스트 미매치).
+  // og_image / image_urls는 외부 호스트일 때만 image-proxy 경유 — ORB 차단 회피.
+  const thumb =
+    post.cover_image
+    ?? proxyIfNeeded(post.og_image)
+    ?? proxyIfNeeded(post.image_urls?.[0])
+    ?? null;
   const title = post.title || post.og_title || '(제목 없음)';
   const isLink = post.post_type === POST_TYPE.LINK;
   const isOwner = !!currentUserId && currentUserId === post.user_id;

@@ -13,6 +13,7 @@ import { TABLE, POST_TYPE, SOURCE_PLATFORM, type Post, type OrderPackage } from 
 import { isEmbeddable, toEmbedUrl } from '@/lib/embed';
 import { extractArticle, type ExtractedArticle } from '@/lib/extract';
 import { findPackageByCode } from '@/lib/orders';
+import { proxyIfNeeded } from '@/lib/imageProxy';
 import LikeButton from '@/components/LikeButton';
 import CommentsSection from '@/components/CommentsSection';
 
@@ -163,7 +164,7 @@ function TextPostBody({ post }: { post: Post }) {
             // eslint-disable-next-line @next/next/no-img-element
             <img
               key={src}
-              src={src}
+              src={proxyIfNeeded(src) ?? ''}
               alt=""
               className="w-full rounded-lg border border-zinc-200 dark:border-zinc-800"
             />
@@ -236,7 +237,7 @@ function LinkPostBody({
         >
           {post.og_image && (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={post.og_image} alt="" className="aspect-video w-full object-cover" />
+            <img src={proxyIfNeeded(post.og_image) ?? ''} alt="" className="aspect-video w-full object-cover" />
           )}
           <div className="p-4">
             <div className="text-sm font-medium text-zinc-900 dark:text-zinc-50">

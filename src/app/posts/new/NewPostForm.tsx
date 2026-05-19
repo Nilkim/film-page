@@ -10,6 +10,7 @@
 import { useEffect, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { createPost } from './actions';
+import { proxyIfNeeded } from '@/lib/imageProxy';
 
 // OrderThumbnail은 paper.js 의존 → SSR에서 jsdom 체인 끌어와 빌드 깨짐.
 // `ssr: false`로 클라이언트에서만 로드.
@@ -319,7 +320,7 @@ export default function NewPostForm() {
         <div className="flex gap-3 overflow-hidden rounded-md border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950">
           {og.image && (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={og.image} alt="" className="h-20 w-32 flex-none rounded object-cover" />
+            <img src={proxyIfNeeded(og.image) ?? ''} alt="" className="h-20 w-32 flex-none rounded object-cover" />
           )}
           <div className="min-w-0">
             <div className="line-clamp-1 text-sm font-medium text-zinc-900 dark:text-zinc-50">

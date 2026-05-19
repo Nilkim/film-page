@@ -12,6 +12,8 @@
 // 주의: 외부 사이트 구조가 바뀌면 추출이 깨질 수 있다. 그래서 항상 실패를
 // 정상 경로로 처리해야 한다 — 호출 측에서 null이면 OG 카드 폴백.
 
+import { shouldProxy, toProxyUrl } from './imageProxy';
+
 const FETCH_TIMEOUT_MS = 6_000;
 const MAX_BYTES = 1_500_000; // 1.5MB — 본문 + 이미지 태그 다수 포함 가능
 
@@ -255,30 +257,8 @@ function stripTags(html: string): string {
 //   6. referrerpolicy="no-referrer" 추가 — hotlink 차단 회피 (프록시 폴백)
 //   7. loading="lazy" 추가 — 본문 긴 글의 첫 페인트 가속
 
-// 우리 image-proxy 라우트가 처리하는 호스트(API route의 ALLOWED_HOST_SUFFIXES와 일치).
-const PROXY_HOST_SUFFIXES = [
-  'pstatic.net',
-  'naver.com',
-  'daumcdn.net',
-  'kakaocdn.net',
-];
-
-function shouldProxy(rawUrl: string): boolean {
-  try {
-    const u = new URL(rawUrl);
-    const host = u.hostname.toLowerCase();
-    return PROXY_HOST_SUFFIXES.some(
-      (suffix) => host === suffix || host.endsWith(`.${suffix}`),
-    );
-  } catch {
-    return false;
-  }
-}
-
-function toProxyUrl(rawUrl: string): string {
-  return `/api/image-proxy?url=${encodeURIComponent(rawUrl)}`;
-}
-
+// 본문 <img> 후처리 — lazy-load 승격, 네이버 작은 변환 → w966, image-proxy rewrite,
+// inline 크기 제거, referrerpolicy/loading 보강.
 function postProcessImages(html: string): string {
   return html.replace(/<img\b([^>]*)>/gi, (_full, attrsRaw: string) => {
     let attrs = attrsRaw;
