@@ -5,6 +5,7 @@
 // OG 메타는 <head> 안에 단순한 형태로만 들어가므로 정규식으로 충분.
 
 import { normalizeForFetch } from './extract';
+import { decodeEntities } from './htmlEntities';
 
 const FETCH_TIMEOUT_MS = 5_000;
 // YouTube 같이 <head>가 매우 큰 사이트(인라인 CSS/JSON-LD 다수)도 커버하려면
@@ -195,13 +196,3 @@ async function fetchYoutubeOembed(rawUrl: string): Promise<OgMeta | null> {
   }
 }
 
-function decodeEntities(s: string): string {
-  return s
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&#x27;/gi, "'")
-    .replace(/&nbsp;/g, ' ');
-}
