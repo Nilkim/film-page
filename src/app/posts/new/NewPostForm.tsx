@@ -482,7 +482,7 @@ export default function NewPostForm() {
               className="block w-full text-sm text-zinc-700 file:mr-3 file:rounded-md file:border-0 file:bg-zinc-100 file:px-3 file:py-1.5 file:text-sm file:text-zinc-700 hover:file:bg-zinc-200 dark:text-zinc-300 dark:file:bg-zinc-900 dark:file:text-zinc-300 dark:hover:file:bg-zinc-800"
             />
             <div className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-              비우면 OG 이미지 사용.
+              비우면 OG 이미지 사용. <span className="font-medium text-zinc-700 dark:text-zinc-300">4:3 가로형(예: 1200×900px)</span> 권장 — 메인 카드 썸네일이 4:3로 잘려요.
             </div>
             {coverPreview && (
               // eslint-disable-next-line @next/next/no-img-element
