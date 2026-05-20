@@ -96,9 +96,13 @@ export async function updatePost(postId: string, formData: FormData) {
     if (existing.cover_image) prevPathToDelete = extractStoragePath(existing.cover_image);
   }
 
+  // 제목은 char_length 1~200 제약 — og_title은 길이 무제한이라 200자로 클램프.
+  const finalTitle =
+    [...(title || ogTitle || '(제목 없음)')].slice(0, 200).join('').trim() || '(제목 없음)';
+
   // DB 업데이트.
   const updates: Record<string, unknown> = {
-    title: title || ogTitle || '(제목 없음)',
+    title: finalTitle,
     external_url: externalUrl,
     source_platform: detectPlatform(externalUrl),
     og_title: ogTitle,
