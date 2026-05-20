@@ -17,6 +17,7 @@ import Header from '@/components/Header';
 import CreateCard from '@/components/CreateCard';
 import PostCard from '@/components/PostCard';
 import FeedControls from '@/components/FeedControls';
+import Footer from '@/components/Footer';
 import { createClient } from '@/lib/supabase/server';
 import { TABLE, type Post } from '@/lib/db';
 
@@ -106,10 +107,7 @@ export default async function Home(props: PageProps<'/'>) {
         )}
       </main>
 
-      <footer className="flex flex-wrap items-center justify-between gap-2 border-t border-ink py-3.5 text-[11px] tracking-[0.06em] text-ink-60">
-        <span>© {new Date().getFullYear()} Cotyledon</span>
-        <span>필름 커팅 작품 커뮤니티</span>
-      </footer>
+      <Footer />
     </div>
   );
 }
