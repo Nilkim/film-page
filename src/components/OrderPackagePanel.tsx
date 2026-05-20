@@ -10,28 +10,14 @@ import { useState } from 'react';
 import dynamic from 'next/dynamic';
 import type { ShapeData } from '@/lib/shapeBounds';
 
-// 각 도형의 실제 절단 크기 = |width*scaleX| × |height*scaleY| (mm). 0 크기는 제외.
-// Math.abs 필수 — 에디터에서 도형을 반전(mirror)하면 scaleX/scaleY가 음수가 되어
-// 절댓값을 안 쓰면 음수 크기가 필터에 걸려 도형이 통째로 누락됨.
-// (computeUnionBounds는 멀티 도형을 한 박스로 합쳐 개별 piece 크기가 안 나옴)
-function shapeSizes(shapes: ShapeData[] | null | undefined): string[] {
-  if (!Array.isArray(shapes)) return [];
-  return shapes
-    .map((s) => {
-      const w = Math.round(Math.abs((s.width || 0) * (s.scaleX || 1)));
-      const h = Math.round(Math.abs((s.height || 0) * (s.scaleY || 1)));
-      return w > 0 && h > 0 ? `${w} × ${h} mm` : null;
-    })
-    .filter((v): v is string => v !== null);
-}
-
-// OrderThumbnail은 paper.js 의존 → SSR에서 깨짐. 클라이언트에서만 로드.
+// OrderThumbnail / ShapeSizeList 모두 paper.js 의존 → SSR에서 깨짐. 클라이언트에서만 로드.
 const OrderThumbnail = dynamic(() => import('@/components/OrderThumbnail'), {
   ssr: false,
   loading: () => (
     <div className="flex-none rounded border border-card-line bg-ink-06" style={{ width: 72, height: 72 }} />
   ),
 });
+const ShapeSizeList = dynamic(() => import('@/components/ShapeSizeList'), { ssr: false });
 
 export type OrderDetail = {
   code: string;
@@ -50,7 +36,6 @@ export default function OrderPackagePanel({
   // 선택된 주문 코드(단일). 같은 칩 다시 누르면 닫힘.
   const [openCode, setOpenCode] = useState<string | null>(null);
   const open = details.find((d) => d.code === openCode) ?? null;
-  const openSizes = shapeSizes(open?.shapes_json);
 
   return (
     <div className="rounded-[6px] border border-card-line bg-card px-4 py-3">
@@ -112,12 +97,7 @@ export default function OrderPackagePanel({
             ) : (
               <div className="mt-0.5 text-xs text-ink-45">상세 정보를 가져오지 못했어요.</div>
             )}
-            {openSizes.length > 0 && (
-              <div className="mt-1 text-[11px] text-ink-60">
-                <span className="text-ink-45">사이즈</span>{' '}
-                {openSizes.join(', ')}
-              </div>
-            )}
+            <ShapeSizeList shapes={open.shapes_json} />
           </div>
         </div>
       )}
