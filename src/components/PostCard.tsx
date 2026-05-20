@@ -75,7 +75,8 @@ export default function PostCard({
               {idx}
             </span>
           )}
-          <span className="line-clamp-2 text-[13px] font-semibold leading-[1.4] text-ink text-pretty">
+          {/* min-h-[2.8em]: 제목이 1줄이어도 2줄 높이를 예약 → 같은 행 카드 높이 통일 */}
+          <span className="line-clamp-2 min-h-[2.8em] text-[13px] font-semibold leading-[1.4] text-ink text-pretty">
             {title}
           </span>
         </div>
