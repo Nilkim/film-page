@@ -5,6 +5,7 @@
 //
 // Server Component — Supabase server client로 직접 쿼리. RLS의
 // select_all 정책 덕분에 비로그인 사용자도 피드를 볼 수 있음.
+import Link from 'next/link';
 import Header from '@/components/Header';
 import CreateCard from '@/components/CreateCard';
 import PostCard from '@/components/PostCard';
@@ -41,9 +42,20 @@ export default async function Home() {
           <h1 className="text-[clamp(20px,2.4vw,24px)] font-bold tracking-[-0.02em] text-balance">
             자신만의 필름아트웍 자랑해보세요
           </h1>
-          <span className="text-[11px] tracking-[0.18em] text-ink-45">
-            {itemCount} ITEMS · ALL
-          </span>
+          {/* 우측: 로그인 시 글쓰기 버튼 + 카운트 메타 (원래 + 새 글 버튼 위치 복원) */}
+          <div className="flex items-center gap-3">
+            {user && (
+              <Link
+                href="/posts/new"
+                className="whitespace-nowrap border border-ink bg-ink px-3.5 py-[7px] text-xs tracking-[0.08em] text-bg transition-colors duration-150 hover:bg-transparent hover:text-ink"
+              >
+                + 글쓰기
+              </Link>
+            )}
+            <span className="text-[11px] tracking-[0.18em] text-ink-45">
+              {itemCount} ITEMS · ALL
+            </span>
+          </div>
         </div>
 
         {/* auto-fill 그리드: 데스크탑 min 220px·gap 25px, ≤480px min 160px·gap 16px */}
