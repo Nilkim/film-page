@@ -8,6 +8,7 @@
 import Link from 'next/link';
 import type { Post } from '@/lib/db';
 import { proxyIfNeeded } from '@/lib/imageProxy';
+import { decodeEntities } from '@/lib/htmlEntities';
 import PostCardActions from './PostCardActions';
 
 // 핸드오프 모션 easing — transform 계열에 공통 적용.
@@ -33,7 +34,7 @@ export default function PostCard({
     ?? proxyIfNeeded(post.og_image)
     ?? proxyIfNeeded(post.image_urls?.[0])
     ?? null;
-  const title = post.title || post.og_title || '(제목 없음)';
+  const title = decodeEntities(post.title || post.og_title) || '(제목 없음)';
   const favicon = faviconUrl(post.external_url);
   const isOwner = !!currentUserId && currentUserId === post.user_id;
   const idx = index != null ? String(index).padStart(2, '0') : null;
