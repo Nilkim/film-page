@@ -1,23 +1,28 @@
-// 게시글 카드 한 장. 클릭 시 /posts/[id] 상세로 이동.
+// 게시글 카드 한 장. 클릭 시 /posts/[id] 상세로 이동. (FilmArtwork 핸드오프 디자인)
 //
 // 본인 글이면 우상단에 수정/삭제 아이콘이 떠 있음. <a> 안에 <a>/<button> 중첩이
 // HTML invalid라 카드 본문(<Link>)과 액션 div를 sibling으로 배치한다.
 //
 // Layout: 카드 자체는 자유 높이, 썸네일 div만 aspect-[4/3] 비율 고정.
-// (카드 전체에 aspect 비율을 걸면 좁은 그리드 셀에서 제목 칸이 압축돼 사라짐)
+// hover 시 카드 lift + shadow + border 강조, 썸네일 scale(1.06) (group hover).
 import Link from 'next/link';
 import type { Post } from '@/lib/db';
 import { POST_TYPE } from '@/lib/db';
 import { proxyIfNeeded } from '@/lib/imageProxy';
 import PostCardActions from './PostCardActions';
 
+// 핸드오프 모션 easing — transform 계열에 공통 적용.
+const EASE = '[transition-timing-function:cubic-bezier(.2,.7,.2,1)]';
+
 export default function PostCard({
   post,
+  index,
   currentUserId,
   likeCount = 0,
   commentCount = 0,
 }: {
   post: Post;
+  index?: number;
   currentUserId?: string | null;
   likeCount?: number;
   commentCount?: number;
@@ -32,81 +37,68 @@ export default function PostCard({
   const title = post.title || post.og_title || '(제목 없음)';
   const isLink = post.post_type === POST_TYPE.LINK;
   const isOwner = !!currentUserId && currentUserId === post.user_id;
+  const idx = index != null ? String(index).padStart(2, '0') : null;
+  const label = post.package_code || (post.order_code ? `주문 ${post.order_code}` : '');
 
   return (
     <div className="relative">
       <Link
         href={`/posts/${post.id}`}
-        className="group flex flex-col overflow-hidden rounded-lg border border-zinc-200 bg-white transition-shadow hover:shadow-md dark:border-zinc-800 dark:bg-zinc-950"
+        className={`group flex flex-col overflow-hidden rounded-[6px] border border-card-line bg-card transition-[transform,box-shadow,border-color] duration-[350ms] ${EASE} hover:-translate-y-[3px] hover:border-ink-60 hover:shadow-[0_8px_22px_rgba(27,22,16,0.08)]`}
       >
-        {/* 썸네일 컨테이너:
-            - aspect-[4/3]로 비율 고정
-            - overflow-hidden: 자식이 박스를 벗어나도 가림
-            - 자식 img는 absolute로 → 부모 height에 영향 X (img의 intrinsic 크기가
-              부모를 늘리는 순환 문제 차단) */}
-        <div className="relative aspect-[4/3] overflow-hidden bg-zinc-100 dark:bg-zinc-900">
+        {/* 썸네일 컨테이너: aspect-[4/3] 비율 고정, group hover 시 내부 이미지 zoom */}
+        <div className="relative aspect-[4/3] overflow-hidden bg-ink-06">
           {thumb ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={thumb}
               alt=""
-              className="absolute inset-0 h-full w-full object-cover"
+              className={`absolute inset-0 h-full w-full object-cover transition-transform duration-[550ms] ${EASE} group-hover:scale-[1.06]`}
               loading="lazy"
             />
           ) : (
-            <div className="absolute inset-0 flex items-center justify-center text-xs text-zinc-400 dark:text-zinc-600">
+            <div className="absolute inset-0 flex items-center justify-center font-mono text-xs text-ink-45">
               no image
             </div>
           )}
           {isLink && post.source_platform && (
-            <span className="absolute left-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-white">
+            <span className="absolute left-2 top-2 border border-ink bg-card px-[7px] py-[3px] text-[9px] font-bold uppercase tracking-[0.18em] text-ink">
               {post.source_platform}
             </span>
           )}
         </div>
-        <div className="border-t border-zinc-100 px-3 py-2 dark:border-zinc-900">
-          <div className="line-clamp-1 text-sm font-medium text-zinc-900 dark:text-zinc-50">
+
+        {/* 본문: idx + 제목(2-line clamp) */}
+        <div className="flex items-baseline gap-2.5 border-t border-ink-10 px-3 pb-2 pt-2.5">
+          {idx && (
+            <span className="text-[10px] font-bold tabular-nums tracking-[0.08em] text-ink-45">
+              {idx}
+            </span>
+          )}
+          <span className="line-clamp-2 text-[13px] font-semibold leading-[1.4] text-ink text-pretty">
             {title}
-          </div>
-          <div className="mt-1 flex items-center justify-between gap-2">
-            <span className="truncate font-mono text-[10px] tracking-wide text-zinc-500 dark:text-zinc-400">
-              {post.package_code || (post.order_code ? `주문 ${post.order_code}` : '')}
+          </span>
+        </div>
+
+        {/* 메타: 좌측 식별자, 우측 좋아요·댓글 통계 */}
+        <div className="flex items-center justify-between gap-2 px-3 pb-2.5 pt-1.5 text-[10.5px] text-ink-45">
+          <span className="truncate">{label}</span>
+          <span className="flex shrink-0 items-center gap-2 tabular-nums">
+            <span className="inline-flex items-center gap-1" aria-label={`좋아요 ${likeCount}`}>
+              <span aria-hidden="true">♥</span>
+              {likeCount}
             </span>
-            <span className="flex shrink-0 items-center gap-2 text-[11px] text-zinc-500 dark:text-zinc-400">
-              <span className="inline-flex items-center gap-0.5" aria-label={`좋아요 ${likeCount}`}>
-                <HeartIcon />
-                {likeCount}
-              </span>
-              <span className="inline-flex items-center gap-0.5" aria-label={`댓글 ${commentCount}`}>
-                <CommentIcon />
-                {commentCount}
-              </span>
+            <span className="inline-flex items-center gap-1" aria-label={`댓글 ${commentCount}`}>
+              <CommentIcon />
+              {commentCount}
             </span>
-          </div>
+          </span>
         </div>
       </Link>
 
       {/* 본인 글에만 표시. sibling 배치라 카드 Link 클릭과 충돌 없음. */}
       {isOwner && <PostCardActions postId={post.id} />}
     </div>
-  );
-}
-
-function HeartIcon() {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="h-3 w-3"
-      aria-hidden="true"
-    >
-      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-    </svg>
   );
 }
 
