@@ -5,7 +5,6 @@
 //
 // Server Component — Supabase server client로 직접 쿼리. RLS의
 // select_all 정책 덕분에 비로그인 사용자도 피드를 볼 수 있음.
-import Link from 'next/link';
 import Header from '@/components/Header';
 import CreateCard from '@/components/CreateCard';
 import PostCard from '@/components/PostCard';
@@ -29,31 +28,32 @@ export default async function Home() {
   };
   const list: PostWithCounts[] = (posts as PostWithCounts[] | null) ?? [];
 
+  // 카드 개수 메타: "NN ITEMS · ALL" (2자리 zero-pad).
+  const itemCount = String(list.length).padStart(2, '0');
+
   return (
-    <div className="flex flex-1 flex-col bg-zinc-50 dark:bg-black">
+    <div className="mx-auto flex w-full max-w-[1440px] flex-1 flex-col px-[clamp(16px,4vw,40px)]">
       <Header />
 
-      <main className="mx-auto w-full max-w-5xl flex-1 px-6 py-10">
-        <div className="mb-6 flex items-center justify-between">
-          <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50">
-            작품 둘러보기
-          </h2>
-          {user && (
-            <Link
-              href="/posts/new"
-              className="rounded-md bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-zinc-700 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200"
-            >
-              + 새 글
-            </Link>
-          )}
+      <main className="flex-1">
+        {/* 섹션 헤딩 행 — 좌측 H1 + 우측 카운트 메타, baseline 정렬 */}
+        <div className="flex flex-wrap items-baseline justify-between gap-x-4 py-[26px] pb-4">
+          <h1 className="text-[clamp(20px,2.4vw,24px)] font-bold tracking-[-0.02em] text-balance">
+            자신만의 필름아트웍 자랑해보세요
+          </h1>
+          <span className="text-[11px] tracking-[0.18em] text-ink-45">
+            {itemCount} ITEMS · ALL
+          </span>
         </div>
 
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
+        {/* auto-fill 그리드: 데스크탑 min 220px·gap 25px, ≤480px min 160px·gap 16px */}
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-[25px] pt-1 pb-8 max-[480px]:grid-cols-[repeat(auto-fill,minmax(160px,1fr))] max-[480px]:gap-4">
           <CreateCard />
-          {list.map((p) => (
+          {list.map((p, i) => (
             <PostCard
               key={p.id}
               post={p}
+              index={i + 1}
               currentUserId={user?.id ?? null}
               likeCount={p.film_page_likes?.[0]?.count ?? 0}
               commentCount={p.film_page_comments?.[0]?.count ?? 0}
@@ -62,14 +62,15 @@ export default async function Home() {
         </div>
 
         {list.length === 0 && (
-          <p className="mt-8 text-center text-sm text-zinc-500 dark:text-zinc-400">
+          <p className="mt-8 text-center text-sm text-ink-45">
             아직 게시글이 없어요. {user ? '첫 글을 작성해 보세요!' : '로그인 후 첫 글을 남길 수 있어요.'}
           </p>
         )}
       </main>
 
-      <footer className="border-t border-zinc-200 py-6 text-center text-xs text-zinc-500 dark:border-zinc-800 dark:text-zinc-500">
-        © {new Date().getFullYear()} Cotyledon · 필름 커팅 작품 커뮤니티
+      <footer className="flex flex-wrap items-center justify-between gap-2 border-t border-ink py-3.5 text-[11px] tracking-[0.06em] text-ink-60">
+        <span>© {new Date().getFullYear()} Cotyledon</span>
+        <span>필름 커팅 작품 커뮤니티</span>
       </footer>
     </div>
   );
