@@ -7,7 +7,6 @@
 // hover 시 카드 lift + shadow + border 강조, 썸네일 scale(1.06) (group hover).
 import Link from 'next/link';
 import type { Post } from '@/lib/db';
-import { POST_TYPE } from '@/lib/db';
 import { proxyIfNeeded } from '@/lib/imageProxy';
 import PostCardActions from './PostCardActions';
 
@@ -35,7 +34,7 @@ export default function PostCard({
     ?? proxyIfNeeded(post.image_urls?.[0])
     ?? null;
   const title = post.title || post.og_title || '(제목 없음)';
-  const isLink = post.post_type === POST_TYPE.LINK;
+  const favicon = faviconUrl(post.external_url);
   const isOwner = !!currentUserId && currentUserId === post.user_id;
   const idx = index != null ? String(index).padStart(2, '0') : null;
   const label = post.package_code || (post.order_code ? `주문 ${post.order_code}` : '');
@@ -61,9 +60,12 @@ export default function PostCard({
               no image
             </div>
           )}
-          {isLink && post.source_platform && (
-            <span className="absolute left-2 top-2 border border-ink bg-card px-[7px] py-[3px] text-[9px] font-bold uppercase tracking-[0.18em] text-ink">
-              {post.source_platform}
+          {favicon && (
+            // 링크 페이지의 파비콘 — 흰 라운드 칩 안에. 미지의 도메인은 구글이
+            // 기본 아이콘을 돌려줘 깨질 일이 거의 없음(별도 onError 불필요).
+            <span className="absolute left-2 top-2 flex size-6 items-center justify-center rounded-[5px] border border-card-line bg-card p-1 shadow-[0_1px_3px_rgba(27,22,16,0.12)]">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={favicon} alt="" className="size-full object-contain" loading="lazy" />
             </span>
           )}
         </div>
@@ -101,6 +103,17 @@ export default function PostCard({
       {isOwner && <PostCardActions postId={post.id} />}
     </div>
   );
+}
+
+// 외부 링크 호스트의 파비콘 URL. 구글 파비콘 서비스 사용 — 네이버블로그/유튜브
+// 등 각 사이트 아이콘을 호스트만으로 안정적으로 가져온다.
+function faviconUrl(url: string | null | undefined): string | null {
+  if (!url) return null;
+  try {
+    return `https://www.google.com/s2/favicons?sz=64&domain=${new URL(url).hostname}`;
+  } catch {
+    return null;
+  }
 }
 
 function CommentIcon() {
