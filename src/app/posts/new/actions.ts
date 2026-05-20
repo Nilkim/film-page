@@ -92,9 +92,15 @@ export async function createPost(formData: FormData) {
   // 항상 LINK 타입 — 내부 본문 작성 기능 제거됨. body는 빈 문자열로 저장.
   const sourcePlatform = detectPlatform(externalUrl);
 
+  // 제목은 DB 제약 char_length(title) between 1 and 200. og_title은 길이 무제한이라
+  // 그대로 쓰면 200자 초과로 INSERT가 거부됨 → 코드포인트 200자로 클램프.
+  // (Array.from = 코드포인트 단위 → Postgres char_length와 일치, 서로게이트 쌍 안전)
+  const finalTitle =
+    [...(title || ogTitle || '(제목 없음)')].slice(0, 200).join('').trim() || '(제목 없음)';
+
   const row = {
     user_id: user.id,
-    title: title || ogTitle || '(제목 없음)',
+    title: finalTitle,
     body, // 빈 문자열 — DB의 char_length(body) <= 10000 제약 통과
     image_urls: [],
     cover_image: coverUrl,
