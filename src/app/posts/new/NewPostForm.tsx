@@ -52,6 +52,15 @@ export default function NewPostForm() {
   const [ordersError, setOrdersError] = useState<string | null>(null);
   const [ordersLoaded, setOrdersLoaded] = useState(false);
 
+  // === 패키지 이름 (작성자 입력) + 실시간 중복 체크 ===
+  const [packageName, setPackageName] = useState('');
+  const [pkgCheck, setPkgCheck] = useState<{
+    checking: boolean;
+    available: boolean | null;
+    reason: string | null;
+  }>({ checking: false, available: null, reason: null });
+  const pkgDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // === 외부 링크 + 제목 ===
   const [url, setUrl] = useState('');
   const [title, setTitle] = useState('');
@@ -105,6 +114,33 @@ export default function NewPostForm() {
       setOrdersLoading(false);
     }
   }
+
+  // 패키지 이름 입력 → 디바운스 → 형식+중복 체크 (/api/packages/check)
+  useEffect(() => {
+    if (pkgDebounceRef.current) clearTimeout(pkgDebounceRef.current);
+    const name = packageName.trim();
+    if (!name) {
+      setPkgCheck({ checking: false, available: null, reason: null });
+      return;
+    }
+    setPkgCheck({ checking: true, available: null, reason: null });
+    pkgDebounceRef.current = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/packages/check?code=${encodeURIComponent(name)}`);
+        const data = await res.json();
+        setPkgCheck({
+          checking: false,
+          available: !!data.available,
+          reason: data.reason ?? null,
+        });
+      } catch {
+        setPkgCheck({ checking: false, available: null, reason: '확인 실패 — 다시 시도해 주세요.' });
+      }
+    }, 500);
+    return () => {
+      if (pkgDebounceRef.current) clearTimeout(pkgDebounceRef.current);
+    };
+  }, [packageName]);
 
   function toggleOrder(code: string) {
     setSelectedCodes((prev) => {
@@ -190,7 +226,8 @@ export default function NewPostForm() {
   // 제목은 사용자가 직접 입력했거나 OG에서 자동 채워졌으면 OK.
   // 둘 다 비어있는 경우만(드물지만 사이트가 메타를 안 주는 경우) 제출 불가.
   const hasTitle = title.trim().length > 0 || og.title.length > 0;
-  const canSubmit = selectedCodes.size > 0 && hasUrl && hasTitle;
+  const pkgNameOk = packageName.trim().length > 0 && pkgCheck.available === true;
+  const canSubmit = selectedCodes.size > 0 && pkgNameOk && hasUrl && hasTitle;
 
   return (
     <form action={createPost} className="space-y-6">
@@ -286,6 +323,41 @@ export default function NewPostForm() {
             ))}
           </div>
         )}
+
+        {/* 패키지 이름 — 작성자가 직접 입력. 중복 시 경고. */}
+        <div className="mt-4 border-t border-zinc-100 pt-4 dark:border-zinc-900">
+          <label htmlFor="package-name" className="text-sm font-medium text-zinc-900 dark:text-zinc-50">
+            패키지 이름
+          </label>
+          <p className="mb-2 mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
+            이 묶음을 부를 이름이에요. 한글·영문·숫자로 자유롭게. 다른 사람과 겹치면 안 돼요.
+          </p>
+          <input
+            id="package-name"
+            type="text"
+            name="package_name"
+            value={packageName}
+            onChange={(e) => setPackageName(e.target.value)}
+            placeholder="예: 우리집 거실 인테리어"
+            maxLength={40}
+            aria-invalid={pkgCheck.available === false}
+            className={inputCls}
+          />
+          {/* 상태 메시지: 확인 중 / 사용 가능 / 중복·형식 오류 */}
+          {packageName.trim() && (
+            <div className="mt-1 text-xs">
+              {pkgCheck.checking ? (
+                <span className="text-zinc-500">사용 가능 여부 확인 중…</span>
+              ) : pkgCheck.available === true ? (
+                <span className="text-green-600 dark:text-green-500">✓ 사용 가능한 이름이에요.</span>
+              ) : pkgCheck.available === false ? (
+                <span className="text-red-600">{pkgCheck.reason ?? '사용할 수 없는 이름이에요.'} 다른 이름을 입력해 주세요.</span>
+              ) : pkgCheck.reason ? (
+                <span className="text-red-600">{pkgCheck.reason}</span>
+              ) : null}
+            </div>
+          )}
+        </div>
 
         {Array.from(selectedCodes).map((c) => (
           <input key={c} type="hidden" name="order_codes" value={c} />
@@ -429,9 +501,11 @@ export default function NewPostForm() {
           <span className="text-xs text-zinc-500">
             {selectedCodes.size === 0
               ? '주문을 1개 이상 선택해 주세요.'
-              : !hasUrl
-                ? '외부 링크 URL을 입력해 주세요.'
-                : 'OG 제목을 못 가져왔어요. "제목 & 썸네일 수정하기"를 펼쳐 직접 입력해 주세요.'}
+              : !pkgNameOk
+                ? '사용 가능한 패키지 이름을 입력해 주세요.'
+                : !hasUrl
+                  ? '외부 링크 URL을 입력해 주세요.'
+                  : 'OG 제목을 못 가져왔어요. "제목 & 썸네일 수정하기"를 펼쳐 직접 입력해 주세요.'}
           </span>
         )}
         <button
