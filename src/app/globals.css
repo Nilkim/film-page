@@ -1,26 +1,34 @@
+/* Pretendard — handoff에서 지정한 본문/제목 폰트 (한글+라틴 모두 커버).
+   CDN variable 버전: weight 100~900을 한 파일로 처리.
+   @import는 모든 규칙보다 앞서야 하므로 tailwind import보다 위에 둔다. */
+@import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.css");
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/*
+  FilmArtwork 디자인 핸드오프 토큰.
+  @theme에 등록하면 Tailwind v4가 text-ink / bg-bg / border-card-line 같은
+  유틸리티를 자동 생성한다. ink-* 스케일은 alpha를 가진 단일 잉크색의 단계.
+  라이트 전용 — 다크모드 분기는 의도적으로 제거(핸드오프는 mono/white 고정).
+*/
+@theme {
+  --color-bg: #fffefa; /* page background (warm ivory) */
+  --color-card: #ffffff; /* card background */
+  --color-ink: #1b1610; /* primary text + structural borders */
+  --color-ink-60: rgba(27, 22, 16, 0.6); /* secondary text */
+  --color-ink-45: rgba(27, 22, 16, 0.45); /* tertiary: idx, meta */
+  --color-ink-30: rgba(27, 22, 16, 0.3); /* CTA dashed border */
+  --color-ink-10: rgba(27, 22, 16, 0.1); /* card internal divider */
+  --color-ink-06: rgba(27, 22, 16, 0.06); /* thumb fallback bg */
+  --color-card-line: rgba(27, 22, 16, 0.18); /* card outer border */
+  --color-terracotta: #c95931; /* reserved: favicon / future accent */
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --font-sans: "Pretendard Variable", Pretendard, system-ui, -apple-system,
+    "Segoe UI", sans-serif;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
 }
