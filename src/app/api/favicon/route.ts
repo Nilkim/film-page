@@ -6,8 +6,15 @@
 //   - DuckDuckGo:        naver OK, tistory 404
 // → faviconV2 → DuckDuckGo → s2 순으로 첫 성공(200 + 이미지)을 반환.
 //
-// 서버에서 fetch하므로 CORS 무관. 결과는 길게 캐시해 매 요청 외부 호출을 막는다.
+// 서버에서 fetch하므로 CORS 무관.
+//
+// 캐시 주의: 응답을 `public`으로 두면 Netlify 엣지가 ?url 쿼리를 무시하고 경로만으로
+// 캐싱해 모든 파비콘이 한 개로 통일되는 버그가 있었다. → force-dynamic으로 매 요청
+// 함수를 실행하고, 캐시는 `private`(브라우저 전용)로 둬 전체 URL 단위로만 캐시한다.
 import { type NextRequest } from 'next/server';
+
+// 매 요청 함수 실행 — Next 라우트 캐시/엣지 경로 캐시에 갇히지 않도록.
+export const dynamic = 'force-dynamic';
 
 const TIMEOUT_MS = 4_000;
 
@@ -60,8 +67,9 @@ export async function GET(req: NextRequest) {
           status: 200,
           headers: {
             'content-type': res.headers.get('content-type') ?? 'image/png',
-            // 하루 캐시 + stale-while-revalidate. CDN/브라우저 모두 적용.
-            'cache-control': 'public, max-age=86400, stale-while-revalidate=604800',
+            // private — 공유(CDN) 캐시 금지(경로-키 충돌 회피), 브라우저는 전체 URL로
+            // 키잉하므로 ?url별로 안전하게 하루 캐시.
+            'cache-control': 'private, max-age=86400',
           },
         });
       }
