@@ -19,6 +19,9 @@ const OrderThumbnail = dynamic(() => import('@/components/OrderThumbnail'), {
 });
 const ShapeSizeList = dynamic(() => import('@/components/ShapeSizeList'), { ssr: false });
 
+// 코틸레돈 네이버 스마트스토어 — 주문 패키지 박스 우하단 구매 링크.
+const SMARTSTORE_URL = 'https://smartstore.naver.com/cotyledon/products/13553995545';
+
 export type OrderDetail = {
   code: string;
   shapes_json: ShapeData[] | null;
@@ -101,6 +104,22 @@ export default function OrderPackagePanel({
           </div>
         </div>
       )}
+
+      {/* 우하단 네이버쇼핑 구매 링크 */}
+      <div className="mt-3 flex justify-end">
+        <a
+          href={SMARTSTORE_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1.5 rounded-full bg-[#03C75A] px-3 py-1 text-[11px] font-medium text-white transition-opacity hover:opacity-90"
+          aria-label="네이버쇼핑에서 구매"
+        >
+          <span className="grid size-4 place-items-center rounded-[3px] bg-white text-[10px] font-extrabold leading-none text-[#03C75A]">
+            N
+          </span>
+          네이버쇼핑
+        </a>
+      </div>
     </div>
   );
 }
