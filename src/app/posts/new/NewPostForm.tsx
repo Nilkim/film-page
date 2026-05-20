@@ -234,10 +234,10 @@ export default function NewPostForm() {
       {/* ====== 1. 주문 패키지 ====== */}
       <section className="rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
         <h2 className="mb-2 text-sm font-semibold text-zinc-900 dark:text-zinc-50">
-          주문 패키지
+          패키지 만들기
         </h2>
         <p className="mb-3 text-xs text-zinc-500 dark:text-zinc-400">
-          전화번호로 본인 주문을 불러오고, 글에 묶을 주문을 골라요. 묶음에는 새 패키지 코드가 부여돼요.
+          여러 도면을 묶어줍니다.
         </p>
 
         <div className="flex gap-2">
@@ -254,7 +254,7 @@ export default function NewPostForm() {
             disabled={ordersLoading || !phone.trim()}
             className="shrink-0 rounded-md bg-zinc-900 px-3 py-2 text-sm font-medium text-white hover:bg-zinc-700 disabled:opacity-50 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200"
           >
-            {ordersLoading ? '조회 중…' : '주문 가져오기'}
+            {ordersLoading ? '조회 중…' : '도면 조회'}
           </button>
         </div>
         {ordersError && (
