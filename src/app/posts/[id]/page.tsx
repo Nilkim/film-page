@@ -14,6 +14,7 @@ import { isEmbeddable, toEmbedUrl } from '@/lib/embed';
 import { extractArticle, type ExtractedArticle } from '@/lib/extract';
 import { findPackageByCode, findOrdersByPhone } from '@/lib/orders';
 import { proxyIfNeeded } from '@/lib/imageProxy';
+import { decodeEntities } from '@/lib/htmlEntities';
 import LikeButton from '@/components/LikeButton';
 import CommentsSection from '@/components/CommentsSection';
 import OrderPackagePanel, { type OrderDetail } from '@/components/OrderPackagePanel';
@@ -54,7 +55,6 @@ export default async function PostDetailPage(props: PageProps<'/posts/[id]'>) {
   const orderCodes = pkg?.order_codes ?? (post.order_code ? [post.order_code] : []);
   let orderDetails: OrderDetail[] = orderCodes.map((code) => ({
     code,
-    created_at: null,
     shapes_json: null,
     film_name: null,
     film_color: null,
@@ -66,7 +66,6 @@ export default async function PostDetailPage(props: PageProps<'/posts/[id]'>) {
       const s = byCode.get(code);
       return {
         code,
-        created_at: s?.created_at ?? null,
         shapes_json: s?.shapes_json ?? null,
         film_name: s?.film_snapshot?.name ?? null,
         film_color: s?.film_snapshot?.color_hex ?? null,
@@ -105,7 +104,7 @@ export default async function PostDetailPage(props: PageProps<'/posts/[id]'>) {
         <OrderPackagePanel packageCode={post.package_code} details={orderDetails} />
 
         <h1 className="mt-4 text-2xl font-bold text-zinc-900 dark:text-zinc-50">
-          {post.title || post.og_title || '(제목 없음)'}
+          {decodeEntities(post.title || post.og_title) || '(제목 없음)'}
         </h1>
         <div className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
           {new Date(post.created_at).toLocaleDateString('ko-KR')}
@@ -181,6 +180,10 @@ function LinkPostBody({
   const embedUrl = isEmbeddable(post.source_platform)
     ? toEmbedUrl(post.external_url, post.source_platform!)
     : null;
+  // Instagram 임베드는 세로로 길어 16:9(aspect-video)에 안 맞음 → 별도 사이징.
+  const isInstagram = post.source_platform === SOURCE_PLATFORM.INSTAGRAM;
+  // 임베드형(youtube/instagram)은 본문 추출을 안 하므로 og_description을 캡션으로 노출.
+  const caption = embedUrl ? decodeEntities(post.og_description) : '';
 
   let origin = '';
   try {
@@ -204,17 +207,31 @@ function LinkPostBody({
       </div>
 
       {embedUrl ? (
-        // YouTube / Instagram — 공식 임베드 iframe
-        <div className="aspect-video w-full overflow-hidden rounded-lg border border-zinc-200 bg-black dark:border-zinc-800">
-          <iframe
-            src={embedUrl}
-            className="h-full w-full"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-            allowFullScreen
-            sandbox="allow-scripts allow-same-origin allow-popups allow-presentation"
-            referrerPolicy="strict-origin-when-cross-origin"
-          />
-        </div>
+        isInstagram ? (
+          // Instagram — 세로 카드. 고정 높이 + 폭 제한, 중앙 정렬. 내부 스크롤 최소화.
+          <div className="mx-auto w-full max-w-[540px] overflow-hidden rounded-lg border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950">
+            <iframe
+              src={embedUrl}
+              className="h-[720px] w-full"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              allowFullScreen
+              sandbox="allow-scripts allow-same-origin allow-popups allow-presentation"
+              referrerPolicy="strict-origin-when-cross-origin"
+            />
+          </div>
+        ) : (
+          // YouTube — 16:9 임베드
+          <div className="aspect-video w-full overflow-hidden rounded-lg border border-zinc-200 bg-black dark:border-zinc-800">
+            <iframe
+              src={embedUrl}
+              className="h-full w-full"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              allowFullScreen
+              sandbox="allow-scripts allow-same-origin allow-popups allow-presentation"
+              referrerPolicy="strict-origin-when-cross-origin"
+            />
+          </div>
+        )
       ) : extracted ? (
         // 블로그 본문을 서버에서 직접 추출 — 사이트 안에 인라인 렌더
         <ExtractedBody extracted={extracted} />
@@ -232,11 +249,11 @@ function LinkPostBody({
           )}
           <div className="p-4">
             <div className="text-sm font-medium text-zinc-900 dark:text-zinc-50">
-              {post.og_title ?? post.external_url}
+              {decodeEntities(post.og_title) || post.external_url}
             </div>
             {post.og_description && (
               <p className="mt-1 line-clamp-2 text-xs text-zinc-600 dark:text-zinc-400">
-                {post.og_description}
+                {decodeEntities(post.og_description)}
               </p>
             )}
             <div className="mt-2 text-[11px] text-zinc-500 dark:text-zinc-500">
@@ -244,6 +261,13 @@ function LinkPostBody({
             </div>
           </div>
         </a>
+      )}
+
+      {/* 임베드형 글의 캡션 — Instagram/YouTube는 본문 추출을 안 하므로 og_description 노출 */}
+      {caption && (
+        <p className="whitespace-pre-wrap text-sm leading-relaxed text-zinc-700 dark:text-zinc-300">
+          {caption}
+        </p>
       )}
 
       {post.body && (
