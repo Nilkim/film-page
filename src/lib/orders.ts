@@ -65,23 +65,60 @@ export function userHandle(user: Pick<User, 'id' | 'email'>): string {
   return user.id.replace(/-/g, '').slice(0, 8);
 }
 
-// 주문번호 묶음으로 패키지 생성. `{handle}-{NNN}` 형식, 사용자별 일련번호.
-// (user_id, user_seq) unique 제약 위반 시 최대 5회까지 재시도(동시성 보호).
+// 패키지 이름(=package_code) 입력 규칙. 작성자가 직접 입력 — 한글/영문/숫자/공백.
+export const PACKAGE_NAME_MIN = 2;
+export const PACKAGE_NAME_MAX = 40;
+
+// 이름 검증 — 길이 + 허용 문자(한글/영문/숫자/공백/일부 기호). 통과 시 null, 실패 시 사유.
+export function validatePackageName(raw: string): string | null {
+  const name = raw.trim();
+  if (name.length < PACKAGE_NAME_MIN) return `이름은 ${PACKAGE_NAME_MIN}자 이상이어야 해요.`;
+  if (name.length > PACKAGE_NAME_MAX) return `이름은 ${PACKAGE_NAME_MAX}자 이하여야 해요.`;
+  // 한글(완성형+자모), 영문, 숫자, 공백, - _ . 만 허용.
+  if (!/^[가-힣㄰-㆏\w \-.]+$/.test(name)) {
+    return '한글·영문·숫자와 공백, - _ . 만 사용할 수 있어요.';
+  }
+  return null;
+}
+
+// package_code(=이름)가 이미 사용 중인지. anon SELECT 허용이라 클라이언트에서도 호출 가능.
+export async function isPackageCodeTaken(
+  supabase: SupabaseClient,
+  code: string,
+): Promise<boolean> {
+  const { data } = await supabase
+    .from(PACKAGES_TABLE)
+    .select('package_code')
+    .eq('package_code', code.trim())
+    .maybeSingle();
+  return !!data;
+}
+
+// 주문번호 묶음으로 패키지 생성. 이름(package_code)은 작성자가 입력한 값을 사용.
+// 이름 중복은 사용자 오류 → 먼저 검사해 명확한 에러. user_seq는 자동 채번하며,
+// (user_id, user_seq) 동시성 충돌(23505) 시 최대 5회 재시도.
 export async function createPackage(
   supabase: SupabaseClient,
   user: Pick<User, 'id' | 'email'>,
   phone: string | null,
   orderCodes: string[],
+  desiredCode: string,
 ): Promise<OrderPackage> {
   if (orderCodes.length === 0) {
     throw new Error('주문번호를 1개 이상 선택해 주세요.');
   }
 
-  const handle = userHandle(user);
+  const packageCode = desiredCode.trim();
+  const nameError = validatePackageName(packageCode);
+  if (nameError) throw new Error(nameError);
+
+  // 이름 중복 선검사 — 삽입 중 23505를 user_seq 경합과 구분하기 위함.
+  if (await isPackageCodeTaken(supabase, packageCode)) {
+    throw new Error('이미 사용 중인 패키지 이름이에요. 다른 이름을 입력해 주세요.');
+  }
 
   for (let attempt = 0; attempt < 5; attempt++) {
     const seq = await nextSeqForUser(supabase, user.id);
-    const packageCode = `${handle}-${String(seq).padStart(3, '0')}`;
 
     const { data, error } = await supabase
       .from(PACKAGES_TABLE)
@@ -97,13 +134,18 @@ export async function createPackage(
 
     if (!error && data) return data as OrderPackage;
 
-    // 23505 = unique 위반. (user_id, user_seq) 또는 package_code 충돌이면 재시도.
-    const isDup = (error as { code?: string } | null)?.code === '23505';
-    if (!isDup) {
+    const code = (error as { code?: string } | null)?.code;
+    const msg = (error as { message?: string } | null)?.message ?? '';
+    // package_code 중복(선검사 통과 후 경합) → 사용자 오류로 즉시 안내.
+    if (code === '23505' && /package_code/i.test(msg)) {
+      throw new Error('이미 사용 중인 패키지 이름이에요. 다른 이름을 입력해 주세요.');
+    }
+    // (user_id, user_seq) 동시성 충돌 → 재시도. 그 외 에러는 즉시 throw.
+    if (code !== '23505') {
       throw new Error(error?.message ?? '패키지 생성 실패');
     }
   }
-  throw new Error('패키지 코드 생성 충돌이 반복됐어요. 다시 시도해 주세요.');
+  throw new Error('패키지 생성 충돌이 반복됐어요. 다시 시도해 주세요.');
 }
 
 // 패키지 단건 조회 — 상세 페이지에서 package_code로 가져올 때.
