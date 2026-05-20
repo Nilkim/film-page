@@ -10,14 +10,16 @@ import { useState } from 'react';
 import dynamic from 'next/dynamic';
 import type { ShapeData } from '@/lib/shapeBounds';
 
-// 각 도형의 실제 절단 크기 = width*scaleX × height*scaleY (mm). 0 크기는 제외.
+// 각 도형의 실제 절단 크기 = |width*scaleX| × |height*scaleY| (mm). 0 크기는 제외.
+// Math.abs 필수 — 에디터에서 도형을 반전(mirror)하면 scaleX/scaleY가 음수가 되어
+// 절댓값을 안 쓰면 음수 크기가 필터에 걸려 도형이 통째로 누락됨.
 // (computeUnionBounds는 멀티 도형을 한 박스로 합쳐 개별 piece 크기가 안 나옴)
 function shapeSizes(shapes: ShapeData[] | null | undefined): string[] {
   if (!Array.isArray(shapes)) return [];
   return shapes
     .map((s) => {
-      const w = Math.round((s.width || 0) * (s.scaleX || 1));
-      const h = Math.round((s.height || 0) * (s.scaleY || 1));
+      const w = Math.round(Math.abs((s.width || 0) * (s.scaleX || 1)));
+      const h = Math.round(Math.abs((s.height || 0) * (s.scaleY || 1)));
       return w > 0 && h > 0 ? `${w} × ${h} mm` : null;
     })
     .filter((v): v is string => v !== null);
