@@ -39,11 +39,15 @@ export async function createPost(formData: FormData) {
   const ogDescription = s(formData.get('og_description')) || null;
   const ogImage = s(formData.get('og_image')) || null;
   const coverFile = formData.get('cover_image');
+  const packageName = s(formData.get('package_name'));
 
   // ===== 검증 =====
   // 모든 게시글은 외부 링크 기반 (내부 본문 작성 기능 제거됨).
   if (orderCodes.length === 0) {
     throw new Error('주문 번호를 1개 이상 선택해 주세요.');
+  }
+  if (!packageName) {
+    throw new Error('패키지 이름을 입력해 주세요.');
   }
   if (!externalUrl) {
     throw new Error('외부 링크 URL을 입력해 주세요.');
@@ -81,8 +85,8 @@ export async function createPost(formData: FormData) {
   }
 
   // ===== 패키지 생성 =====
-  // user 객체를 통째로 넘김 — handle 도출에 email 필요.
-  const pkg = await createPackage(supabase, user, phone || null, orderCodes);
+  // 패키지 이름(package_code)은 작성자 입력값. 중복/형식 검증은 createPackage 내부에서.
+  const pkg = await createPackage(supabase, user, phone || null, orderCodes, packageName);
 
   // ===== 게시글 분류 =====
   // 항상 LINK 타입 — 내부 본문 작성 기능 제거됨. body는 빈 문자열로 저장.
