@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // 디자인 핸드오프 참조 파일 — 빌드 대상 아님(README: "not production code").
+    "design_handoff_filmartwork/**",
   ]),
 ]);
 
