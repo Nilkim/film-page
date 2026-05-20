@@ -54,6 +54,19 @@ export function computeLocalBounds(shape: ShapeData): Bounds {
   return { left: -w / 2, right: w / 2, top: -h / 2, bottom: h / 2 };
 }
 
+// 각 도형의 외곽 박스 크기(mm). FilmCutting OrderLookupPage의 computeShapeSizes와
+// 1:1 동일 — computeLocalBounds(paper 기반)라 pathData·회전·반전(음수 scale)을
+// 모두 정확히 반영하고, 박스는 항상 양수라 별도 보정이 필요 없다.
+export function computeShapeSizes(
+  shapes: ShapeData[] | null | undefined,
+): { w: number; h: number }[] {
+  if (!Array.isArray(shapes)) return [];
+  return shapes.map((s) => {
+    const b = computeLocalBounds(s);
+    return { w: Math.round(b.right - b.left), h: Math.round(b.bottom - b.top) };
+  });
+}
+
 // 여러 도형의 world bounds union — 각 shape local bounds에 x/y offset 더해
 // 4면 min/max로 합침. 비거나 모두 실패면 null.
 export function computeUnionBounds(shapes: ShapeData[] | null | undefined): Bounds | null {
