@@ -106,12 +106,14 @@ export default function PostCard({
   );
 }
 
-// 외부 링크 호스트의 파비콘 URL. 구글 파비콘 서비스 사용 — 네이버블로그/유튜브
-// 등 각 사이트 아이콘을 호스트만으로 안정적으로 가져온다.
+// 외부 링크 파비콘 URL. 자체 프록시(/api/favicon) 경유 — 여러 서비스를 순서대로
+// 시도해 네이버블로그/티스토리 등 단일 서비스가 못 잡는 도메인까지 커버한다.
 function faviconUrl(url: string | null | undefined): string | null {
   if (!url) return null;
   try {
-    return `https://www.google.com/s2/favicons?sz=64&domain=${new URL(url).hostname}`;
+    // URL 유효성만 검증 후 프록시에 위임.
+    new URL(url);
+    return `/api/favicon?url=${encodeURIComponent(url)}`;
   } catch {
     return null;
   }
