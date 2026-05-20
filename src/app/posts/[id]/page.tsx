@@ -12,10 +12,11 @@ import { createClient } from '@/lib/supabase/server';
 import { TABLE, POST_TYPE, SOURCE_PLATFORM, type Post, type OrderPackage } from '@/lib/db';
 import { isEmbeddable, toEmbedUrl } from '@/lib/embed';
 import { extractArticle, type ExtractedArticle } from '@/lib/extract';
-import { findPackageByCode } from '@/lib/orders';
+import { findPackageByCode, findOrdersByPhone } from '@/lib/orders';
 import { proxyIfNeeded } from '@/lib/imageProxy';
 import LikeButton from '@/components/LikeButton';
 import CommentsSection from '@/components/CommentsSection';
+import OrderPackagePanel, { type OrderDetail } from '@/components/OrderPackagePanel';
 
 export default async function PostDetailPage(props: PageProps<'/posts/[id]'>) {
   const { id } = await props.params;
@@ -48,6 +49,31 @@ export default async function PostDetailPage(props: PageProps<'/posts/[id]'>) {
     ? await findPackageByCode(supabase, post.package_code)
     : null;
 
+  // 묶인 주문 코드 + 각 주문 상세(도형/필름) — 칩 클릭 시 펼쳐 보여줌.
+  // 상세는 패키지에 저장된 phone으로 RPC 재조회해 매칭(없으면 코드만 표시).
+  const orderCodes = pkg?.order_codes ?? (post.order_code ? [post.order_code] : []);
+  let orderDetails: OrderDetail[] = orderCodes.map((code) => ({
+    code,
+    created_at: null,
+    shapes_json: null,
+    film_name: null,
+    film_color: null,
+  }));
+  if (orderCodes.length > 0 && pkg?.phone) {
+    const summaries = await findOrdersByPhone(supabase, pkg.phone);
+    const byCode = new Map(summaries.map((s) => [s.code, s]));
+    orderDetails = orderCodes.map((code) => {
+      const s = byCode.get(code);
+      return {
+        code,
+        created_at: s?.created_at ?? null,
+        shapes_json: s?.shapes_json ?? null,
+        film_name: s?.film_snapshot?.name ?? null,
+        film_color: s?.film_snapshot?.color_hex ?? null,
+      };
+    });
+  }
+
   // 블로그 등 임베드 불가 외부 링크는 서버에서 본문 HTML을 직접 추출해서
   // 우리 페이지 안에 인라인 렌더한다. 실패 시 null → OG 카드 폴백.
   let extracted: ExtractedArticle | null = null;
@@ -64,19 +90,19 @@ export default async function PostDetailPage(props: PageProps<'/posts/[id]'>) {
   }
 
   return (
-    <div className="flex flex-1 flex-col bg-zinc-50 dark:bg-black">
+    <div className="flex flex-1 flex-col bg-bg">
       <Header />
 
       <main className="mx-auto w-full max-w-3xl flex-1 px-6 py-10">
         <Link
           href="/"
-          className="mb-4 inline-block text-sm text-zinc-500 hover:underline dark:text-zinc-400"
+          className="mb-4 inline-block text-sm text-ink-60 hover:underline"
         >
           ← 목록으로
         </Link>
 
-        {/* 상단 패키지 강조 영역 — 페이지 진입 시 가장 먼저 보이게. */}
-        <PackageHeader post={post} pkg={pkg} />
+        {/* 상단 패키지 강조 영역 — 페이지 진입 시 가장 먼저 보이게. 칩 클릭 시 상세. */}
+        <OrderPackagePanel packageCode={post.package_code} details={orderDetails} />
 
         <h1 className="mt-4 text-2xl font-bold text-zinc-900 dark:text-zinc-50">
           {post.title || post.og_title || '(제목 없음)'}
@@ -116,41 +142,6 @@ export default async function PostDetailPage(props: PageProps<'/posts/[id]'>) {
         {/* 댓글 */}
         <CommentsSection postId={post.id} />
       </main>
-    </div>
-  );
-}
-
-// 상단 패키지 헤더 — "주문 패키지: PKG-XXX" + 묶인 주문번호 목록.
-function PackageHeader({ post, pkg }: { post: Post; pkg: OrderPackage | null }) {
-  const codes = pkg?.order_codes ?? (post.order_code ? [post.order_code] : []);
-
-  return (
-    <div className="rounded-lg border border-zinc-900 bg-zinc-900 px-4 py-3 text-zinc-50 dark:border-zinc-50 dark:bg-zinc-50 dark:text-zinc-900">
-      <div className="flex items-center justify-between gap-3">
-        <div className="text-[11px] uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
-          주문 패키지
-        </div>
-        {pkg && (
-          <div className="text-[11px] text-zinc-400 dark:text-zinc-500">
-            {codes.length}건 묶음
-          </div>
-        )}
-      </div>
-      <div className="mt-0.5 font-mono text-lg font-bold tracking-wide">
-        {post.package_code || '—'}
-      </div>
-      {codes.length > 0 && (
-        <div className="mt-2 flex flex-wrap gap-1.5">
-          {codes.map((c) => (
-            <span
-              key={c}
-              className="rounded-full bg-zinc-800 px-2 py-0.5 text-[11px] font-medium text-zinc-200 dark:bg-zinc-200 dark:text-zinc-800"
-            >
-              {c}
-            </span>
-          ))}
-        </div>
-      )}
     </div>
   );
 }
