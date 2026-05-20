@@ -1,7 +1,7 @@
 // 상세 페이지 상단 "주문 패키지" 영역 — FilmArtwork 라이트 디자인.
 //
 // 검은 배경 제거(ivory/ink 카드). 묶인 주문 칩을 클릭하면 해당 주문의 상세
-// (도형 썸네일 + 필름 이름/색 + 주문일)를 아래에 펼쳐 보여준다.
+// (도형 썸네일 + 필름 이름/색 + 도형 사이즈)를 아래에 펼쳐 보여준다.
 //
 // Client Component — 칩 토글 상태 + paper.js 썸네일(ssr 불가) 때문.
 'use client';
@@ -9,6 +9,19 @@
 import { useState } from 'react';
 import dynamic from 'next/dynamic';
 import type { ShapeData } from '@/lib/shapeBounds';
+
+// 각 도형의 실제 절단 크기 = width*scaleX × height*scaleY (mm). 0 크기는 제외.
+// (computeUnionBounds는 멀티 도형을 한 박스로 합쳐 개별 piece 크기가 안 나옴)
+function shapeSizes(shapes: ShapeData[] | null | undefined): string[] {
+  if (!Array.isArray(shapes)) return [];
+  return shapes
+    .map((s) => {
+      const w = Math.round((s.width || 0) * (s.scaleX || 1));
+      const h = Math.round((s.height || 0) * (s.scaleY || 1));
+      return w > 0 && h > 0 ? `${w} × ${h} mm` : null;
+    })
+    .filter((v): v is string => v !== null);
+}
 
 // OrderThumbnail은 paper.js 의존 → SSR에서 깨짐. 클라이언트에서만 로드.
 const OrderThumbnail = dynamic(() => import('@/components/OrderThumbnail'), {
@@ -20,7 +33,6 @@ const OrderThumbnail = dynamic(() => import('@/components/OrderThumbnail'), {
 
 export type OrderDetail = {
   code: string;
-  created_at: string | null;
   shapes_json: ShapeData[] | null;
   film_name: string | null;
   film_color: string | null;
@@ -36,6 +48,7 @@ export default function OrderPackagePanel({
   // 선택된 주문 코드(단일). 같은 칩 다시 누르면 닫힘.
   const [openCode, setOpenCode] = useState<string | null>(null);
   const open = details.find((d) => d.code === openCode) ?? null;
+  const openSizes = shapeSizes(open?.shapes_json);
 
   return (
     <div className="rounded-[6px] border border-card-line bg-card px-4 py-3">
@@ -97,9 +110,10 @@ export default function OrderPackagePanel({
             ) : (
               <div className="mt-0.5 text-xs text-ink-45">상세 정보를 가져오지 못했어요.</div>
             )}
-            {open.created_at && (
-              <div className="mt-0.5 text-[11px] text-ink-45">
-                주문일 {new Date(open.created_at).toLocaleDateString('ko-KR')}
+            {openSizes.length > 0 && (
+              <div className="mt-1 text-[11px] text-ink-60">
+                <span className="text-ink-45">사이즈</span>{' '}
+                {openSizes.join(', ')}
               </div>
             )}
           </div>
