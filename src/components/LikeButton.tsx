@@ -1,29 +1,49 @@
 // 좋아요 토글 버튼 (client component).
 //
-// 초기 상태(liked, count)는 server에서 props로 받음.
-// 클릭 시 optimistic update + Server Action 호출 + 결과로 보정.
-// 비로그인 사용자는 표시되지만 클릭 시 /login으로 안내.
+// 페이지가 ISR 캐시되므로 내 좋아요 여부/로그인 상태는 서버가 아니라 여기서(브라우저)
+// 확인한다. 카운트는 서버가 넘긴 공개값(initialCount)을 먼저 보여주고, 마운트 시 최신값으로 보정.
+// 클릭 시 optimistic update + Server Action 호출 + 결과로 보정. 비로그인은 /login 안내.
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
+import { createClient } from '@/lib/supabase/client';
+import { TABLE } from '@/lib/db';
 import { toggleLike } from '@/app/posts/[id]/interactions-actions';
 
 export default function LikeButton({
   postId,
-  initialLiked,
   initialCount,
-  isLoggedIn,
 }: {
   postId: string;
-  initialLiked: boolean;
   initialCount: number;
-  isLoggedIn: boolean;
 }) {
-  const [liked, setLiked] = useState(initialLiked);
+  const [liked, setLiked] = useState(false);
   const [count, setCount] = useState(initialCount);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
+
+  // 마운트 시 로그인 여부 + 내 좋아요 여부 + 최신 카운트를 브라우저에서 조회.
+  useEffect(() => {
+    const supabase = createClient();
+    let active = true;
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!active) return;
+      setIsLoggedIn(!!user);
+      const [mine, total] = await Promise.all([
+        user
+          ? supabase.from(TABLE.LIKES).select('post_id').eq('post_id', postId).eq('user_id', user.id).maybeSingle()
+          : Promise.resolve({ data: null }),
+        supabase.from(TABLE.LIKES).select('post_id', { count: 'exact', head: true }).eq('post_id', postId),
+      ]);
+      if (!active) return;
+      setLiked(!!mine.data);
+      if (typeof total.count === 'number') setCount(total.count);
+    })();
+    return () => { active = false; };
+  }, [postId]);
 
   function onClick() {
     if (!isLoggedIn) {
