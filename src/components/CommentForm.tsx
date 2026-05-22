@@ -6,7 +6,13 @@
 import { useRef, useTransition } from 'react';
 import { addComment } from '@/app/posts/[id]/interactions-actions';
 
-export default function CommentForm({ postId }: { postId: string }) {
+export default function CommentForm({
+  postId,
+  onPosted,
+}: {
+  postId: string;
+  onPosted?: () => void;
+}) {
   const formRef = useRef<HTMLFormElement>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -15,6 +21,7 @@ export default function CommentForm({ postId }: { postId: string }) {
       try {
         await addComment(postId, formData);
         formRef.current?.reset();
+        onPosted?.();
       } catch (err) {
         alert(err instanceof Error ? err.message : '댓글 작성 실패');
       }

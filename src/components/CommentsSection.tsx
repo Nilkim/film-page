@@ -1,10 +1,13 @@
-// 댓글 영역 — server component로 댓글 목록 조회 후 렌더.
+// 댓글 영역 — client component. 댓글 목록과 로그인 상태를 브라우저에서 로드한다.
 //
-// 비로그인 사용자는 폼 대신 "로그인 후 댓글 가능" 안내.
-// 본인 댓글엔 삭제 버튼(CommentItem 내부).
-import { createClient } from '@/lib/supabase/server';
-import { TABLE } from '@/lib/db';
+// 상세 페이지를 ISR로 캐시하기 위해 서버 getUser/댓글조회를 클라이언트로 옮겼다.
+// 부수 효과: 댓글 작성/삭제가 즉시 반영된다(서버 액션 후 reload).
+'use client';
+
+import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
+import { createClient } from '@/lib/supabase/client';
+import { TABLE } from '@/lib/db';
 import CommentForm from './CommentForm';
 import CommentItem from './CommentItem';
 
@@ -16,28 +19,50 @@ export type CommentRow = {
   created_at: string;
 };
 
-export default async function CommentsSection({ postId }: { postId: string }) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+export default function CommentsSection({ postId }: { postId: string }) {
+  const [userId, setUserId] = useState<string | null>(null);
+  const [comments, setComments] = useState<CommentRow[]>([]);
+  const [loaded, setLoaded] = useState(false);
 
-  const { data: comments } = await supabase
-    .from(TABLE.COMMENTS)
-    .select('*')
-    .eq('post_id', postId)
-    .order('created_at', { ascending: true });
+  const reload = useCallback(async () => {
+    const supabase = createClient();
+    const { data } = await supabase
+      .from(TABLE.COMMENTS)
+      .select('*')
+      .eq('post_id', postId)
+      .order('created_at', { ascending: true });
+    setComments((data as CommentRow[] | null) ?? []);
+  }, [postId]);
 
-  const list: CommentRow[] = (comments as CommentRow[] | null) ?? [];
+  useEffect(() => {
+    const supabase = createClient();
+    let active = true;
+    (async () => {
+      const { data } = await supabase.auth.getUser();
+      if (!active) return;
+      setUserId(data.user?.id ?? null);
+      await reload();
+      if (active) setLoaded(true);
+    })();
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
+      setUserId(session?.user?.id ?? null);
+    });
+    return () => {
+      active = false;
+      sub.subscription.unsubscribe();
+    };
+  }, [reload]);
 
   return (
     <section className="mt-10 border-t border-zinc-200 pt-6 dark:border-zinc-800">
       <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
-        댓글 {list.length > 0 && <span className="text-zinc-500">({list.length})</span>}
+        댓글 {comments.length > 0 && <span className="text-zinc-500">({comments.length})</span>}
       </h2>
 
       {/* 작성 폼 또는 로그인 안내 */}
-      {user ? (
+      {userId ? (
         <div className="mt-4">
-          <CommentForm postId={postId} />
+          <CommentForm postId={postId} onPosted={reload} />
         </div>
       ) : (
         <div className="mt-4 rounded-md bg-zinc-50 px-3 py-2 text-sm text-zinc-600 dark:bg-zinc-900 dark:text-zinc-400">
@@ -50,17 +75,18 @@ export default async function CommentsSection({ postId }: { postId: string }) {
       )}
 
       {/* 목록 */}
-      {list.length === 0 ? (
+      {loaded && comments.length === 0 ? (
         <p className="mt-6 text-center text-sm text-zinc-500 dark:text-zinc-400">
           첫 댓글을 남겨 보세요.
         </p>
       ) : (
         <ul className="mt-6 space-y-4">
-          {list.map((c) => (
+          {comments.map((c) => (
             <CommentItem
               key={c.id}
               comment={c}
-              isOwner={!!user && user.id === c.user_id}
+              isOwner={!!userId && userId === c.user_id}
+              onDeleted={reload}
             />
           ))}
         </ul>

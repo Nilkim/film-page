@@ -8,9 +8,11 @@ import type { CommentRow } from './CommentsSection';
 export default function CommentItem({
   comment,
   isOwner,
+  onDeleted,
 }: {
   comment: CommentRow;
   isOwner: boolean;
+  onDeleted?: () => void;
 }) {
   const [isPending, startTransition] = useTransition();
 
@@ -19,6 +21,7 @@ export default function CommentItem({
     startTransition(async () => {
       try {
         await deleteComment(comment.id, comment.post_id);
+        onDeleted?.();
       } catch (err) {
         alert(err instanceof Error ? err.message : '삭제 실패');
       }
