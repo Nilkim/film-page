@@ -22,6 +22,7 @@ export type OrderSummary = {
   created_at: string;
   shapes_json: ShapeData[] | null;
   film_snapshot: FilmSnapshot | null;
+  total_price: number | null; // 해당 주문 총액 (unit_count × price_per_500). 패키지 합계 산출용.
 };
 
 // 전화번호로 주문 목록 조회. FilmCutting의 RPC 함수를 호출.
@@ -46,6 +47,7 @@ export async function findOrdersByPhone(
     created_at: String(row.created_at),
     shapes_json: (row.shapes_json as ShapeData[] | null) ?? null,
     film_snapshot: (row.film_snapshot as FilmSnapshot | null) ?? null,
+    total_price: typeof row.total_price === 'number' ? row.total_price : null,
   }));
 }
 
