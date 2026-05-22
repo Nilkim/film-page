@@ -12,6 +12,13 @@ import { NextResponse, type NextRequest } from 'next/server';
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request });
 
+  // 익명 방문자(Supabase 인증 쿠키 없음)는 refresh할 세션이 없으니 getUser를 건너뛴다.
+  // → 캐시된 페이지에 매 요청 붙던 인증 왕복 지연 제거. (쿠키명: sb-<ref>-auth-token[.N])
+  const hasAuthCookie = request.cookies
+    .getAll()
+    .some((c) => c.name.includes('-auth-token'));
+  if (!hasAuthCookie) return response;
+
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
