@@ -42,6 +42,7 @@ export async function deletePost(postId: string) {
   if (error) throw new Error(`삭제 실패: ${error.message}`);
 
   revalidatePath('/');
+  revalidatePath(`/posts/${postId}`); // 삭제된 글의 ISR 캐시도 무효화
 }
 
 // 게시글 수정. 제목/URL/대표이미지만 수정 가능. 패키지/주문번호는 불변.
