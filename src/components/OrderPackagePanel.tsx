@@ -32,9 +32,11 @@ export type OrderDetail = {
 export default function OrderPackagePanel({
   packageCode,
   details,
+  totalPrice = 0,
 }: {
   packageCode: string;
   details: OrderDetail[];
+  totalPrice?: number;
 }) {
   // 선택된 주문 코드(단일). 같은 칩 다시 누르면 닫힘.
   const [openCode, setOpenCode] = useState<string | null>(null);
@@ -51,6 +53,12 @@ export default function OrderPackagePanel({
       <div className="mt-0.5 text-lg font-bold tracking-[-0.01em] text-ink">
         {packageCode || '—'}
       </div>
+      {totalPrice > 0 && (
+        <div className="mt-0.5 text-[13px] text-ink-60">
+          패키지 가격{' '}
+          <span className="font-semibold text-ink">{totalPrice.toLocaleString('ko-KR')}원</span>
+        </div>
+      )}
 
       {details.length > 0 && (
         <div className="mt-2 flex flex-wrap gap-1.5">
