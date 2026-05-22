@@ -1,10 +1,10 @@
 // 댓글 + 좋아요 Server Actions.
 //
 // 모든 액션은 인증 사용자만. user_id는 본인 것만 허용(RLS와 앱 두 곳에서 검증).
-// 변경 후 revalidatePath로 상세 페이지 + 메인 피드 갱신.
+// 상세 페이지는 ISR 캐시 + 댓글/좋아요는 클라이언트에서 라이브 로드하므로,
+// 여기서 revalidatePath를 호출하지 않는다(호출 시 비싼 페이지 캐시가 매번 무효화됨).
 'use server';
 
-import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { TABLE } from '@/lib/db';
 
@@ -26,8 +26,6 @@ export async function addComment(postId: string, formData: FormData) {
     .from(TABLE.COMMENTS)
     .insert({ post_id: postId, user_id: user.id, body });
   if (error) throw new Error(`댓글 작성 실패: ${error.message}`);
-
-  revalidatePath(`/posts/${postId}`);
 }
 
 // 댓글 삭제. RLS가 본인 글만 허용하지만 명시적으로 user_id 매치도 확인.
@@ -46,8 +44,6 @@ export async function deleteComment(commentId: string, postId: string) {
 
   const { error } = await supabase.from(TABLE.COMMENTS).delete().eq('id', commentId);
   if (error) throw new Error(`삭제 실패: ${error.message}`);
-
-  revalidatePath(`/posts/${postId}`);
 }
 
 // 좋아요 토글 — 이미 누른 상태면 취소, 아니면 추가.
@@ -87,6 +83,5 @@ export async function toggleLike(postId: string): Promise<{ liked: boolean; coun
     .select('post_id', { count: 'exact', head: true })
     .eq('post_id', postId);
 
-  revalidatePath(`/posts/${postId}`);
   return { liked: !existing, count: count ?? 0 };
 }
