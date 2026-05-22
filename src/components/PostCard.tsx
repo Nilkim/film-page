@@ -1,10 +1,15 @@
 // 게시글 카드 한 장. 클릭 시 /posts/[id] 상세로 이동. (FilmArtwork 핸드오프 디자인)
 //
+// client component — 부모 <Feed>가 client에서 currentUserId를 넘겨주고, 본인 글이면
+// 우상단에 수정/삭제 아이콘을 띄운다. (홈 ISR 캐싱을 위해 개인화는 클라이언트에서)
+//
 // 본인 글이면 우상단에 수정/삭제 아이콘이 떠 있음. <a> 안에 <a>/<button> 중첩이
 // HTML invalid라 카드 본문(<Link>)과 액션 div를 sibling으로 배치한다.
 //
 // Layout: 카드 자체는 자유 높이, 썸네일 div만 aspect-[4/3] 비율 고정.
 // hover 시 카드 lift + shadow + border 강조, 썸네일 scale(1.06) (group hover).
+'use client';
+
 import Link from 'next/link';
 import type { Post } from '@/lib/db';
 import { proxyIfNeeded } from '@/lib/imageProxy';
