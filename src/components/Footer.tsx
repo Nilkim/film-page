@@ -14,7 +14,7 @@ const COMPANY = {
   openTime: '09:00 ~ 18:00',
   orderLicense: '제2020-경기김포-2948호',
   bizLicense: '7588601913',
-  address: '10045 경기 김포시 대곶면 황금1로 350 코틸레돈 COTYLEDON',
+  address: '10045 경기 김포시 대곶면 황금1로 348-1 코틸레돈 COTYLEDON',
 };
 
 // 공정위 사업자정보 공개 팝업 — 사업자등록번호로 조회.
