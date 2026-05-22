@@ -74,6 +74,8 @@ export default async function PostDetailPage(props: PageProps<'/posts/[id]'>) {
     film_name: null,
     film_color: null,
   }));
+  // 패키지 합계 가격 = 묶인 주문들의 total_price 합. (개별 가격은 표시 안 함)
+  let packageTotal = 0;
   if (orderCodes.length > 0 && pkg?.phone) {
     const summaries = await findOrdersByPhone(supabase, pkg.phone);
     const byCode = new Map(summaries.map((s) => [s.code, s]));
@@ -86,6 +88,7 @@ export default async function PostDetailPage(props: PageProps<'/posts/[id]'>) {
         film_color: s?.film_snapshot?.color_hex ?? null,
       };
     });
+    packageTotal = orderCodes.reduce((sum, code) => sum + (byCode.get(code)?.total_price ?? 0), 0);
   }
 
   // 블로그 등 임베드 불가 외부 링크는 서버에서 본문 HTML을 직접 추출해서
@@ -112,7 +115,7 @@ export default async function PostDetailPage(props: PageProps<'/posts/[id]'>) {
         </Link>
 
         {/* 상단 패키지 강조 영역 — 페이지 진입 시 가장 먼저 보이게. 칩 클릭 시 상세. */}
-        <OrderPackagePanel packageCode={post.package_code} details={orderDetails} />
+        <OrderPackagePanel packageCode={post.package_code} details={orderDetails} totalPrice={packageTotal} />
 
         <h1 className="mt-4 text-2xl font-bold text-zinc-900 dark:text-zinc-50">
           {decodeEntities(post.title || post.og_title) || '(제목 없음)'}
