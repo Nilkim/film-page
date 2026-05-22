@@ -8,9 +8,10 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import Header from '@/components/Header';
-import { createClient } from '@/lib/supabase/server';
+import { createAnonClient } from '@/lib/supabase/anon';
 import { TABLE, POST_TYPE, SOURCE_PLATFORM, type Post, type OrderPackage } from '@/lib/db';
 import { isEmbeddable, toEmbedUrl } from '@/lib/embed';
+import { unstable_cache } from 'next/cache';
 import { extractArticle, type ExtractedArticle } from '@/lib/extract';
 import { findPackageByCode, findOrdersByPhone } from '@/lib/orders';
 import { proxyIfNeeded } from '@/lib/imageProxy';
@@ -19,10 +20,30 @@ import LikeButton from '@/components/LikeButton';
 import CommentsSection from '@/components/CommentsSection';
 import OrderPackagePanel, { type OrderDetail } from '@/components/OrderPackagePanel';
 
+// ISR: 상세 페이지를 캐시해 매 요청 SSR(콜드 스타트 + 블로그 본문 실시간 fetch)을 피한다.
+// 개인화(내 좋아요/로그인/댓글)는 클라이언트에서 처리. 수정/삭제 시 actions가
+// revalidatePath로 갱신. 공개 데이터만 읽으므로 쿠키 없는 anon 클라이언트 사용.
+export const revalidate = 60;
+
+// 블로그 본문 추출은 외부 fetch(2~4초)라 가장 비싸다. extractArticle의 fetch는
+// AbortController signal 때문에 Next 데이터 캐시에 안 잡히므로, 결과를 URL 기준으로
+// unstable_cache에 1시간 캐싱한다 — 같은 글을 다시 봐도 다시 긁지 않음.
+const getExtractedCached = unstable_cache(
+  async (url: string): Promise<ExtractedArticle | null> => {
+    try {
+      return await extractArticle(url);
+    } catch {
+      return null;
+    }
+  },
+  ['post-extracted-article'],
+  { revalidate: 3600 },
+);
+
 export default async function PostDetailPage(props: PageProps<'/posts/[id]'>) {
   const { id } = await props.params;
 
-  const supabase = await createClient();
+  const supabase = createAnonClient();
   const { data, error } = await supabase
     .from(TABLE.POSTS)
     .select('*')
@@ -32,18 +53,12 @@ export default async function PostDetailPage(props: PageProps<'/posts/[id]'>) {
   if (error || !data) notFound();
   const post = data as Post;
 
-  // 현재 사용자 (좋아요 상태 + 댓글 권한 판정용).
-  const { data: { user } } = await supabase.auth.getUser();
-
-  // 좋아요 카운트 + 본인 좋아요 여부를 병렬 조회.
-  const [{ count: likeCountRaw }, mineRes] = await Promise.all([
-    supabase.from(TABLE.LIKES).select('post_id', { count: 'exact', head: true }).eq('post_id', id),
-    user
-      ? supabase.from(TABLE.LIKES).select('post_id').eq('post_id', id).eq('user_id', user.id).maybeSingle()
-      : Promise.resolve({ data: null }),
-  ]);
+  // 좋아요 공개 카운트(초기 표시용). 내 좋아요 여부는 LikeButton이 클라이언트에서 확인.
+  const { count: likeCountRaw } = await supabase
+    .from(TABLE.LIKES)
+    .select('post_id', { count: 'exact', head: true })
+    .eq('post_id', id);
   const likeCount = likeCountRaw ?? 0;
-  const likedByMe = !!mineRes.data;
 
   // 주문 패키지 정보 — 헤더에 노출. 없으면(legacy) order_code 단건 표시 폴백.
   const pkg: OrderPackage | null = post.package_code
@@ -81,11 +96,7 @@ export default async function PostDetailPage(props: PageProps<'/posts/[id]'>) {
     post.external_url &&
     post.source_platform === SOURCE_PLATFORM.BLOG
   ) {
-    try {
-      extracted = await extractArticle(post.external_url);
-    } catch {
-      extracted = null;
-    }
+    extracted = await getExtractedCached(post.external_url);
   }
 
   return (
@@ -130,12 +141,7 @@ export default async function PostDetailPage(props: PageProps<'/posts/[id]'>) {
 
         {/* 좋아요 — 본문 바로 아래, 우측 정렬 */}
         <div className="mt-8 flex justify-end">
-          <LikeButton
-            postId={post.id}
-            initialLiked={likedByMe}
-            initialCount={likeCount}
-            isLoggedIn={!!user}
-          />
+          <LikeButton postId={post.id} initialCount={likeCount} />
         </div>
 
         {/* 댓글 */}
