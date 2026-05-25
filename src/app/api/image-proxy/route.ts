@@ -1,13 +1,19 @@
 // 외부 이미지 프록시 — 네이버 같은 hotlink 차단 사이트의 이미지를 우리
-// 서버 경유로 가져온다. 우리 서버가 referer 없이 fetch하면 차단 통과.
+// 서버 경유로 가져온다. 우리 서버가 referer를 위장해 fetch하면 차단 통과.
 //
 // 보안:
 //   - 도메인 화이트리스트(네이버 계열 등)만 허용 → SSRF 방지
 //   - Content-Type이 image/* 인지 확인 → HTML 요청 차단
 //   - 응답 크기 5MB, 타임아웃 8초로 캡
 //   - 캐시 헤더로 동일 이미지 반복 요청 시 우리 서버 부담 ↓
+//
+// Instagram CDN 특수 케이스:
+//   scontent-*.cdninstagram.com URL은 짧은 서명 토큰을 포함 → 수시간 후 만료.
+//   DB에 저장된 og_image URL이 죽으므로, `?fallback=<게시글 원본 URL>`을 받아
+//   403/410 시 OG 메타를 재추출해 새 서명 URL로 재시도한다.
 
 import { NextResponse, type NextRequest } from 'next/server';
+import { fetchOgMeta } from '@/lib/og';
 
 const ALLOWED_HOST_SUFFIXES = [
   // 네이버 이미지 호스트들
@@ -26,42 +32,75 @@ const ALLOWED_HOST_SUFFIXES = [
   'githubusercontent.com',
 ];
 
+// fallback URL 화이트리스트 — OG 재추출은 신뢰 가능한 출처에서만.
+const ALLOWED_FALLBACK_HOST_SUFFIXES = [
+  'instagram.com',
+];
+
 const MAX_BYTES = 5 * 1024 * 1024;
 const TIMEOUT_MS = 8_000;
 
+const REFERER_FOR = (h: string): string | null => {
+  if (h.endsWith('pstatic.net') || h.endsWith('naver.com')) return 'https://m.blog.naver.com/';
+  if (h.endsWith('daumcdn.net') || h.endsWith('kakaocdn.net')) return 'https://tistory.com/';
+  // Instagram CDN은 referer가 instagram.com 계열일 때 통과율이 높다.
+  if (h.endsWith('cdninstagram.com') || h.endsWith('fbcdn.net')) return 'https://www.instagram.com/';
+  return null;
+};
+
 export async function GET(req: NextRequest) {
   const raw = req.nextUrl.searchParams.get('url');
+  const fallback = req.nextUrl.searchParams.get('fallback');
   if (!raw) return new NextResponse('url required', { status: 400 });
 
+  const parsed = parseAndValidate(raw);
+  if (!parsed.ok) return new NextResponse(parsed.error, { status: parsed.status });
+
+  // 1차: 원본 URL로 시도.
+  const first = await fetchImage(parsed.target);
+  if (first.kind === 'ok') return imageResponse(first.body, first.contentType);
+
+  // 2차: 403/410 이고 fallback URL이 있으면 OG 메타 재추출 후 재시도.
+  // Instagram CDN의 서명 토큰 만료를 자동 복구하는 경로.
+  if ((first.upstreamStatus === 403 || first.upstreamStatus === 410) && fallback) {
+    const fresh = await refetchViaOg(fallback);
+    if (fresh) {
+      const second = await fetchImage(fresh);
+      if (second.kind === 'ok') return imageResponse(second.body, second.contentType);
+    }
+  }
+
+  return new NextResponse(first.message, { status: first.status });
+}
+
+type Parsed =
+  | { ok: false; error: string; status: number }
+  | { ok: true; target: URL };
+
+function parseAndValidate(raw: string): Parsed {
   let target: URL;
   try {
     target = new URL(raw);
   } catch {
-    return new NextResponse('invalid url', { status: 400 });
+    return { ok: false, error: 'invalid url', status: 400 };
   }
   if (target.protocol !== 'http:' && target.protocol !== 'https:') {
-    return new NextResponse('unsupported protocol', { status: 400 });
+    return { ok: false, error: 'unsupported protocol', status: 400 };
   }
-
-  // SSRF 방지: 화이트리스트된 도메인의 서브도메인만 허용.
   const host = target.hostname.toLowerCase();
   const allowed = ALLOWED_HOST_SUFFIXES.some(
     (suffix) => host === suffix || host.endsWith(`.${suffix}`),
   );
-  if (!allowed) {
-    return new NextResponse('host not allowed', { status: 403 });
-  }
+  if (!allowed) return { ok: false, error: 'host not allowed', status: 403 };
+  return { ok: true, target };
+}
 
-  // 호스트별로 적절한 referer를 위장 — 네이버/티스토리는 본인 도메인에서 온
-  // 것처럼 보여야 hotlink 검증을 통과한다.
-  const refererFor = (h: string): string | null => {
-    if (h.endsWith('pstatic.net') || h.endsWith('naver.com')) return 'https://m.blog.naver.com/';
-    if (h.endsWith('daumcdn.net') || h.endsWith('kakaocdn.net')) return 'https://tistory.com/';
-    // Instagram CDN은 referer가 instagram.com 계열일 때 통과율이 높다.
-    if (h.endsWith('cdninstagram.com') || h.endsWith('fbcdn.net')) return 'https://www.instagram.com/';
-    return null;
-  };
+type FetchResult =
+  | { kind: 'ok'; body: ArrayBuffer; contentType: string }
+  | { kind: 'err'; status: number; upstreamStatus?: number; message: string };
 
+async function fetchImage(target: URL): Promise<FetchResult> {
+  const host = target.hostname.toLowerCase();
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
   try {
@@ -70,7 +109,7 @@ export async function GET(req: NextRequest) {
         'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1',
       accept: 'image/*,*/*;q=0.8',
     };
-    const referer = refererFor(host);
+    const referer = REFERER_FOR(host);
     if (referer) headers['referer'] = referer;
 
     const upstream = await fetch(target.toString(), {
@@ -81,41 +120,78 @@ export async function GET(req: NextRequest) {
 
     if (!upstream.ok) {
       console.warn(`[image-proxy] upstream ${upstream.status} for ${host} (${target.pathname})`);
-      return new NextResponse(`upstream ${upstream.status}`, { status: 502 });
+      return {
+        kind: 'err',
+        status: 502,
+        upstreamStatus: upstream.status,
+        message: `upstream ${upstream.status}`,
+      };
     }
 
     const contentType = upstream.headers.get('content-type') ?? '';
     if (!contentType.startsWith('image/')) {
       console.warn(`[image-proxy] non-image content-type "${contentType}" for ${host}`);
-      return new NextResponse('not an image', { status: 415 });
+      return { kind: 'err', status: 415, message: 'not an image' };
     }
 
-    // 크기 캡 — 매우 큰 파일은 거부 (악용/DoS 방지).
     const len = upstream.headers.get('content-length');
     if (len && Number(len) > MAX_BYTES) {
-      return new NextResponse('too large', { status: 413 });
+      return { kind: 'err', status: 413, message: 'too large' };
     }
 
-    // 본문을 그대로 전달. 캐시 헤더로 브라우저/엣지 캐싱.
     const body = await upstream.arrayBuffer();
     if (body.byteLength > MAX_BYTES) {
-      return new NextResponse('too large', { status: 413 });
+      return { kind: 'err', status: 413, message: 'too large' };
     }
-
-    return new NextResponse(body, {
-      status: 200,
-      headers: {
-        'content-type': contentType,
-        // nosniff — 브라우저가 content-type만 믿게 해서 ORB로 차단되는 거 방지.
-        'x-content-type-options': 'nosniff',
-        // 1일 캐시 — 같은 이미지 반복 요청 시 우리 서버 안 거치게.
-        'cache-control': 'public, max-age=86400, s-maxage=86400',
-      },
-    });
+    return { kind: 'ok', body, contentType };
   } catch (e) {
     const msg = e instanceof Error ? e.message : 'fetch failed';
-    return new NextResponse(msg, { status: 502 });
+    return { kind: 'err', status: 502, message: msg };
   } finally {
     clearTimeout(timer);
   }
+}
+
+// fallback URL의 OG 메타를 재추출 → 새 og:image URL 반환.
+// 화이트리스트(instagram.com) + 이미지 호스트 화이트리스트 둘 다 통과해야 함.
+async function refetchViaOg(fallbackRaw: string): Promise<URL | null> {
+  let fb: URL;
+  try {
+    fb = new URL(fallbackRaw);
+  } catch {
+    return null;
+  }
+  if (fb.protocol !== 'https:') return null;
+  const fbHost = fb.hostname.toLowerCase();
+  const fbAllowed = ALLOWED_FALLBACK_HOST_SUFFIXES.some(
+    (suffix) => fbHost === suffix || fbHost.endsWith(`.${suffix}`),
+  );
+  if (!fbAllowed) return null;
+
+  try {
+    const og = await fetchOgMeta(fb.toString());
+    if (!og.image) return null;
+    const fresh = new URL(og.image);
+    const freshHost = fresh.hostname.toLowerCase();
+    const freshAllowed = ALLOWED_HOST_SUFFIXES.some(
+      (suffix) => freshHost === suffix || freshHost.endsWith(`.${suffix}`),
+    );
+    if (!freshAllowed) return null;
+    return fresh;
+  } catch {
+    return null;
+  }
+}
+
+function imageResponse(body: ArrayBuffer, contentType: string): NextResponse {
+  return new NextResponse(body, {
+    status: 200,
+    headers: {
+      'content-type': contentType,
+      // nosniff — 브라우저가 content-type만 믿게 해서 ORB로 차단되는 거 방지.
+      'x-content-type-options': 'nosniff',
+      // 1일 캐시 — 같은 이미지 반복 요청 시 우리 서버 안 거치게.
+      'cache-control': 'public, max-age=86400, s-maxage=86400',
+    },
+  });
 }
