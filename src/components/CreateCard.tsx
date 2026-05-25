@@ -1,9 +1,9 @@
 // 메인 페이지의 첫 번째 카드 — "직접 만들기" CTA. (FilmArtwork 핸드오프 디자인)
-// FilmCutting 에디터로 이동. 같은 도메인의 /tools 서브경로(Netlify에서 프록시).
+// FilmCutting 에디터로 이동. 같은 도메인의 /tool 서브경로(Netlify에서 프록시).
 //
 // 카드 채움 없는 dashed 아웃라인 슬롯. hover 시 미세 배경 틴트 + 보더 강조,
 // plus 글리프 90도 회전, go-row 화살표 우측 nudge.
-const CUTTING_APP_URL = process.env.NEXT_PUBLIC_CUTTING_URL ?? '/tools';
+const CUTTING_APP_URL = process.env.NEXT_PUBLIC_CUTTING_URL ?? '/tool';
 
 export default function CreateCard() {
   return (
