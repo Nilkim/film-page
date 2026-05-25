@@ -34,9 +34,12 @@ export default function PostCard({
 }) {
   // cover_image는 Supabase Storage URL이라 직접 표시(화이트리스트 미매치).
   // og_image / image_urls는 외부 호스트일 때만 image-proxy 경유 — ORB 차단 회피.
+  //
+  // og_image에 external_url을 fallback으로 같이 넘긴다 — Instagram CDN처럼
+  // 서명 토큰이 만료된 경우 프록시가 OG 메타를 재추출해 자동 복구하도록.
   const thumb =
     post.cover_image
-    ?? proxyIfNeeded(post.og_image)
+    ?? proxyIfNeeded(post.og_image, post.external_url)
     ?? proxyIfNeeded(post.image_urls?.[0])
     ?? null;
   const title = decodeEntities(post.title || post.og_title) || '(제목 없음)';
