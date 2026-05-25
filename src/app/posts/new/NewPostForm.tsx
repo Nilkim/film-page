@@ -163,18 +163,23 @@ export default function NewPostForm() {
     }
     if (!/^https?:\/\//i.test(trimmed)) return;
 
+    // 이전 진행 중 fetch는 cleanup에서 abort — 느린 응답이 새 URL의 결과를 덮어쓰지 않도록.
+    const ac = new AbortController();
+
     ogDebounceRef.current = setTimeout(async () => {
       if (trimmed === lastOgUrl.current) return;
       lastOgUrl.current = trimmed;
       setOgLoading(true);
       setOgError(null);
       try {
-        const res = await fetch(`/api/og?url=${encodeURIComponent(trimmed)}`);
+        const res = await fetch(`/api/og?url=${encodeURIComponent(trimmed)}`, { signal: ac.signal });
         if (!res.ok) {
           const err = await res.json().catch(() => ({}));
           throw new Error(err.error || `HTTP ${res.status}`);
         }
         const data = await res.json();
+        // 응답 도착 시점에 URL이 또 바뀌었으면 이 응답은 stale — 무시.
+        if (ac.signal.aborted) return;
         const next: OgState = {
           title: data.title ?? '',
           description: data.description ?? '',
@@ -187,15 +192,18 @@ export default function NewPostForm() {
           setTitle(next.title);
         }
       } catch (e) {
+        if ((e as Error).name === 'AbortError') return;
         setOgError(e instanceof Error ? e.message : '미리보기 가져오기 실패');
         setOg(EMPTY_OG);
       } finally {
-        setOgLoading(false);
+        if (!ac.signal.aborted) setOgLoading(false);
       }
     }, 600);
 
     return () => {
       if (ogDebounceRef.current) clearTimeout(ogDebounceRef.current);
+      // URL이 또 바뀌면 진행 중 fetch 취소. AbortController로 race condition 방지.
+      ac.abort();
     };
   }, [url]);
 
