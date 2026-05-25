@@ -81,6 +81,9 @@ async function fetchHtml(url: string): Promise<string | null> {
   try {
     const res = await fetch(url, {
       signal: controller.signal,
+      // cache: 'no-store' — signal 만으로도 Next 데이터 캐시 회피되지만 명시 안전망.
+      // (상위 unstable_cache가 결과를 url 키로 1시간 캐시 — 외부 fetch 자체는 매번 fresh)
+      cache: 'no-store',
       headers: {
         // 모바일 브라우저로 보이게 — 일부 사이트가 봇을 차단해서.
         'user-agent':
