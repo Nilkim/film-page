@@ -16,26 +16,10 @@
 [[plugins]]
   package = "@netlify/plugin-nextjs"
 
-# /tools, /tool 서브경로를 FilmCutting Netlify 사이트로 프록시(URL은 그대로).
+# /tool/* 서브경로를 FilmCutting Netlify 사이트로 프록시(URL은 그대로).
 # - status=200 + 외부 절대 URL = Netlify rewrite proxy(브라우저는 같은 도메인으로 인지).
-# - FilmCutting 측이 vite base='/tool/'로 빌드돼 있어 자산 경로는 /tool/* 유지.
-#   사용자 진입 경로는 /tools(복수)로 노출, 자산 매칭은 기존 /tool/* 룰이 그대로 처리.
+# - FilmCutting 측이 vite base='/tool/'로 빌드돼 있어 자산도 /tool/* 로 일관 매칭됨.
 # - force=true 로 Next.js 라우트 매칭보다 우선.
-
-# 사용자 진입 경로: film-artwork.com/tools → FilmCutting 루트
-[[redirects]]
-  from = "/tools"
-  to = "https://filmcutting.netlify.app/tool/"
-  status = 200
-  force = true
-
-[[redirects]]
-  from = "/tools/*"
-  to = "https://filmcutting.netlify.app/tool/:splat"
-  status = 200
-  force = true
-
-# 자산 호환: vite base='/tool/'로 빌드된 JS/CSS/img 경로
 [[redirects]]
   from = "/tool/*"
   to = "https://filmcutting.netlify.app/tool/:splat"
