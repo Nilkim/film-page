@@ -16,6 +16,10 @@ const ALLOWED_HOST_SUFFIXES = [
   // 티스토리
   'daumcdn.net',
   'kakaocdn.net',
+  // Instagram / Facebook CDN — og:image가 scontent-*.cdninstagram.com 등을 가리킴.
+  // 외부 도메인 referer로 직접 fetch하면 차단되거나 짧은 토큰 만료로 403.
+  'cdninstagram.com',
+  'fbcdn.net',
   // 일반적으로 hotlink 안 막는 곳 (있어도 무방)
   'imgur.com',
   'github.com',
@@ -53,6 +57,8 @@ export async function GET(req: NextRequest) {
   const refererFor = (h: string): string | null => {
     if (h.endsWith('pstatic.net') || h.endsWith('naver.com')) return 'https://m.blog.naver.com/';
     if (h.endsWith('daumcdn.net') || h.endsWith('kakaocdn.net')) return 'https://tistory.com/';
+    // Instagram CDN은 referer가 instagram.com 계열일 때 통과율이 높다.
+    if (h.endsWith('cdninstagram.com') || h.endsWith('fbcdn.net')) return 'https://www.instagram.com/';
     return null;
   };
 
