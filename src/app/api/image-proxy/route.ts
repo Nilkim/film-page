@@ -11,9 +11,18 @@
 //   scontent-*.cdninstagram.com URL은 짧은 서명 토큰을 포함 → 수시간 후 만료.
 //   DB에 저장된 og_image URL이 죽으므로, `?fallback=<게시글 원본 URL>`을 받아
 //   403/410 시 OG 메타를 재추출해 새 서명 URL로 재시도한다.
+//
+// 캐시 주의 (favicon route와 동일 버그):
+//   응답을 `public`으로 두면 Netlify 엣지가 ?url 쿼리를 무시하고 경로만으로
+//   캐싱해 모든 카드의 썸네일이 첫 응답 한 장으로 통일되는 버그가 있다.
+//   → force-dynamic으로 매 요청 함수를 실행하고, 캐시는 `private`(브라우저 전용)로
+//   둬 전체 URL 단위로만 캐시한다.
 
 import { NextResponse, type NextRequest } from 'next/server';
 import { fetchOgMeta } from '@/lib/og';
+
+// 매 요청 함수 실행 — Next 라우트 캐시/엣지 경로 캐시에 갇히지 않도록.
+export const dynamic = 'force-dynamic';
 
 const ALLOWED_HOST_SUFFIXES = [
   // 네이버 이미지 호스트들
@@ -190,8 +199,9 @@ function imageResponse(body: ArrayBuffer, contentType: string): NextResponse {
       'content-type': contentType,
       // nosniff — 브라우저가 content-type만 믿게 해서 ORB로 차단되는 거 방지.
       'x-content-type-options': 'nosniff',
-      // 1일 캐시 — 같은 이미지 반복 요청 시 우리 서버 안 거치게.
-      'cache-control': 'public, max-age=86400, s-maxage=86400',
+      // private — 공유(CDN) 캐시 금지(경로-키 충돌 회피). 브라우저는 전체 URL로
+      // 키잉하므로 ?url별로 안전하게 1일 캐시.
+      'cache-control': 'private, max-age=86400',
     },
   });
 }
