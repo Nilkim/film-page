@@ -14,6 +14,11 @@ const PROXY_HOST_SUFFIXES = [
   // 티스토리 / 카카오
   'daumcdn.net',
   'kakaocdn.net',
+  // Instagram / Facebook CDN — scontent-*.cdninstagram.com, *.fbcdn.net
+  // og:image가 이 CDN을 가리키는데, referer가 외부 도메인이면 차단 또는
+  // 토큰 만료로 403이 나기 쉬워 우리 서버 경유로 referer를 위장한다.
+  'cdninstagram.com',
+  'fbcdn.net',
 ];
 
 export function shouldProxy(rawUrl: string): boolean {
