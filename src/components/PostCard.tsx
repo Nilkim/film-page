@@ -82,7 +82,7 @@ export default function PostCard({
         {/* 본문: idx + 제목(2-line clamp) */}
         <div className="flex items-baseline gap-2.5 border-t border-ink-10 px-3 pb-2 pt-2.5">
           {idx && (
-            <span className="text-[10px] font-bold tabular-nums tracking-[0.08em] text-ink-45">
+            <span className="text-[10px] font-bold tabular-nums tracking-[0.08em] text-ink-70">
               {idx}
             </span>
           )}
@@ -92,9 +92,11 @@ export default function PostCard({
           </span>
         </div>
 
-        {/* 메타: 좌측 식별자, 우측 좋아요·댓글 통계 */}
+        {/* 메타: 좌측 식별자, 우측 좋아요·댓글 통계.
+            같은 OG 썸네일을 다른 사용자가 공유하는 경우(블로그/SNS reference)에도
+            카드별 식별이 즉시 되도록 label(package_code) 가독성을 본문 수준으로 끌어올림. */}
         <div className="flex items-center justify-between gap-2 px-3 pb-2.5 pt-1.5 text-[10.5px] text-ink-45">
-          <span className="truncate">{label}</span>
+          <span className="truncate font-medium text-ink-70">{label}</span>
           <span className="flex shrink-0 items-center gap-2 tabular-nums">
             <span className="inline-flex items-center gap-1" aria-label={`좋아요 ${likeCount}`}>
               <span aria-hidden="true">♥</span>
