@@ -33,15 +33,21 @@ export function shouldProxy(rawUrl: string): boolean {
   }
 }
 
-export function toProxyUrl(rawUrl: string): string {
-  return `/api/image-proxy?url=${encodeURIComponent(rawUrl)}`;
+export function toProxyUrl(rawUrl: string, fallbackUrl?: string | null): string {
+  const base = `/api/image-proxy?url=${encodeURIComponent(rawUrl)}`;
+  // fallback — 1차 이미지 fetch가 403/410이면 이 URL의 OG에서 새 이미지 URL을
+  // 추출해 재시도. Instagram CDN처럼 서명 토큰이 만료되는 경우의 자동 복구용.
+  return fallbackUrl ? `${base}&fallback=${encodeURIComponent(fallbackUrl)}` : base;
 }
 
 // null-safe 편의 함수.
 //   - 빈 값/null → null
 //   - 우리 도메인 또는 화이트리스트 미매치 → 원본 URL 그대로
 //   - 화이트리스트 매치 → /api/image-proxy?url=... 형태
-export function proxyIfNeeded(rawUrl: string | null | undefined): string | null {
+export function proxyIfNeeded(
+  rawUrl: string | null | undefined,
+  fallbackUrl?: string | null,
+): string | null {
   if (!rawUrl) return null;
-  return shouldProxy(rawUrl) ? toProxyUrl(rawUrl) : rawUrl;
+  return shouldProxy(rawUrl) ? toProxyUrl(rawUrl, fallbackUrl) : rawUrl;
 }
