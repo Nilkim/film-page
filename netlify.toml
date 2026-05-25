@@ -1,7 +1,7 @@
 # Netlify build configuration for film-page (Next.js 16).
 #
 # Netlify는 package.json + next.config.ts를 감지해 @netlify/plugin-nextjs를
-# 자동 적용한다. 이 파일은 명시화 + Node 버전 고정 용도.
+# 자동 적용한다. 이 파일은 명시화 + Node 버전 고정 + /tool 프록시 룰.
 
 [build]
   command = "npm run build"
@@ -15,3 +15,13 @@
 # Netlify가 자동 설치하지만 명시.
 [[plugins]]
   package = "@netlify/plugin-nextjs"
+
+# /tool/* 서브경로를 FilmCutting Netlify 사이트로 프록시(URL은 그대로).
+# - status=200 + 외부 절대 URL = Netlify rewrite proxy(브라우저는 같은 도메인으로 인지).
+# - FilmCutting 측이 vite base='/tool/'로 빌드돼 있어 자산도 /tool/* 로 일관 매칭됨.
+# - force=true 로 Next.js 라우트 매칭보다 우선.
+[[redirects]]
+  from = "/tool/*"
+  to = "https://filmcutting.netlify.app/tool/:splat"
+  status = 200
+  force = true
