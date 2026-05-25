@@ -42,7 +42,9 @@ export default function EditPostForm({ post }: { post: Post }) {
   const [hasNewFile, setHasNewFile] = useState(false);
   const [removeCover, setRemoveCover] = useState(false);
 
-  // URL 변경 → 디바운스 → OG fetch
+  // URL 변경 → 디바운스 → OG fetch.
+  // race condition 방지: AbortController로 이전 진행 중 fetch를 취소해, 느린 응답이
+  // 새 URL의 결과를 덮어쓰는 일을 막는다(엉뚱한 글의 og_image가 저장되는 버그 차단).
   useEffect(() => {
     if (ogDebounceRef.current) clearTimeout(ogDebounceRef.current);
     const trimmed = url.trim();
@@ -53,18 +55,22 @@ export default function EditPostForm({ post }: { post: Post }) {
     if (!/^https?:\/\//i.test(trimmed)) return;
     if (trimmed === lastOgUrl.current) return;
 
+    const ac = new AbortController();
+
     ogDebounceRef.current = setTimeout(async () => {
       if (trimmed === lastOgUrl.current) return;
       lastOgUrl.current = trimmed;
       setOgLoading(true);
       setOgError(null);
       try {
-        const res = await fetch(`/api/og?url=${encodeURIComponent(trimmed)}`);
+        const res = await fetch(`/api/og?url=${encodeURIComponent(trimmed)}`, { signal: ac.signal });
         if (!res.ok) {
           const err = await res.json().catch(() => ({}));
           throw new Error(err.error || `HTTP ${res.status}`);
         }
         const data = await res.json();
+        // 응답 도착 시점에 URL이 또 바뀌었으면 이 응답은 stale — 무시.
+        if (ac.signal.aborted) return;
         const next: OgState = {
           title: data.title ?? '',
           description: data.description ?? '',
@@ -74,14 +80,16 @@ export default function EditPostForm({ post }: { post: Post }) {
         setOg(next);
         if (!titleDirty.current && next.title) setTitle(next.title);
       } catch (e) {
+        if ((e as Error).name === 'AbortError') return;
         setOgError(e instanceof Error ? e.message : '미리보기 가져오기 실패');
       } finally {
-        setOgLoading(false);
+        if (!ac.signal.aborted) setOgLoading(false);
       }
     }, 600);
 
     return () => {
       if (ogDebounceRef.current) clearTimeout(ogDebounceRef.current);
+      ac.abort();
     };
   }, [url]);
 
