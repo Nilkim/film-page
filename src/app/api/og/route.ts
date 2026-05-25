@@ -25,9 +25,13 @@ export async function GET(req: NextRequest) {
   try {
     const meta = await fetchOgMeta(url);
     const platform = detectPlatform(url);
-    return NextResponse.json({ ...meta, platform });
+    // no-store: 브라우저/엣지가 다른 URL 요청에 이 응답을 재사용하지 않도록 안전망.
+    // (cache 키는 query에 url=... 가 있어 보통은 분리되지만, 엣지마다 query 처리가 달라 명시.)
+    return NextResponse.json({ ...meta, platform }, {
+      headers: { 'cache-control': 'no-store' },
+    });
   } catch (e) {
     const msg = e instanceof Error ? e.message : 'fetch failed';
-    return NextResponse.json({ error: msg }, { status: 502 });
+    return NextResponse.json({ error: msg }, { status: 502, headers: { 'cache-control': 'no-store' } });
   }
 }
