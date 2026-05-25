@@ -60,6 +60,9 @@ export async function fetchOgMeta(rawUrl: string): Promise<OgMeta> {
     // (사이트 측에서 봇 차별 안 함). extract.ts와 동일한 UA로 통일.
     const res = await fetch(fetchUrl, {
       signal: controller.signal,
+      // cache: 'no-store' — signal 만으로도 Next 데이터 캐시 회피되지만 명시 안전망.
+      // 같은 외부 URL이라도 매번 fresh fetch 보장 → stale OG가 새 글에 박히는 일 차단.
+      cache: 'no-store',
       headers: {
         'user-agent':
           'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1',
