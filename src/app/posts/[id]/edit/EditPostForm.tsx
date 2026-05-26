@@ -183,8 +183,9 @@ export default function EditPostForm({ post }: { post: Post }) {
         </div>
       )}
 
-      {/* og_*(외부 글 메타) hidden input 제거됨 — 저작권 의도로 DB 에 외부 글 메타
-          저장 안 함. OG 미리보기는 위 UI 에 reference 용으로만 표시. */}
+      {/* og_title/og_description 은 hidden input 으로 안 보냄(저작권 의도). og_image
+          만 서버로 전달 — 카드 썸네일용(사용자 결정). */}
+      <input type="hidden" name="og_image" value={og.image} />
 
       {/* 제목 */}
       <div className="block">
