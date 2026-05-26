@@ -7,12 +7,11 @@ const COMPANY = {
   bankAccount: '119-194172-04-013',
   holder: '(주)코틸레돈',
   name: '(주)코틸레돈',
-  owner: '김현구',
-  cpo: '01040091026',
   email: 'cotyledon79@naver.com',
   tel: '01040091026',
   openTime: '09:00 ~ 18:00',
   orderLicense: '제2020-경기김포-2948호',
+  // bizLicense — 화면 노출은 제거됐지만 공정위 사업자정보확인 URL 생성에 필요해 보관.
   bizLicense: '7588601913',
   address: '10045 경기 김포시 대곶면 황금1로 348-1 코틸레돈 COTYLEDON',
 };
@@ -39,8 +38,6 @@ export default function Footer() {
           <h3 className="mb-3 text-[13px] font-bold tracking-[0.04em] text-ink">COMPANY INFO</h3>
           <dl className="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-1.5">
             <Row label="COMPANY">{COMPANY.name}</Row>
-            <Row label="OWNER">{COMPANY.owner}</Row>
-            <Row label="C.P.O">{COMPANY.cpo}</Row>
             <Row label="E-mail">
               <a href={`mailto:${COMPANY.email}`} className="hover:text-ink hover:underline">
                 {COMPANY.email}
@@ -59,7 +56,6 @@ export default function Footer() {
                 [사업자정보확인]
               </a>
             </Row>
-            <Row label="BUSINESS LICENSE">{COMPANY.bizLicense}</Row>
             <Row label="ADDRESS">{COMPANY.address}</Row>
           </dl>
         </section>
