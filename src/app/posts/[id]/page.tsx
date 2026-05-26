@@ -13,6 +13,7 @@ import { TABLE, POST_TYPE, SOURCE_PLATFORM, type Post, type OrderPackage } from 
 import { isEmbeddable, toEmbedUrl } from '@/lib/embed';
 import { unstable_cache } from 'next/cache';
 import { extractArticle, type ExtractedArticle } from '@/lib/extract';
+import { fetchOgMeta, type OgMeta } from '@/lib/og';
 import { findPackageByCode, findOrdersByPhone } from '@/lib/orders';
 import { proxyIfNeeded } from '@/lib/imageProxy';
 import { decodeEntities } from '@/lib/htmlEntities';
@@ -102,6 +103,22 @@ export default async function PostDetailPage(props: PageProps<'/posts/[id]'>) {
     extracted = await getExtractedCached(post.external_url);
   }
 
+  // 외부 글 OG 메타 — 저작권 의도로 DB 에 저장하지 않으므로 매 요청 fresh fetch.
+  // 임베드형(YouTube/Instagram) 캡션 / 블로그 본문 추출 실패 시 OG 카드 폴백에만 사용.
+  // 페이지당 1 fetch — ISR 60s 안에서 재사용되므로 부담 미미.
+  let freshOg: OgMeta | null = null;
+  const needsOg =
+    post.post_type === POST_TYPE.LINK &&
+    !!post.external_url &&
+    (post.source_platform !== SOURCE_PLATFORM.BLOG || extracted === null);
+  if (needsOg && post.external_url) {
+    try {
+      freshOg = await fetchOgMeta(post.external_url);
+    } catch {
+      freshOg = null;
+    }
+  }
+
   return (
     <div className="flex flex-1 flex-col bg-bg">
       <Header />
@@ -118,7 +135,7 @@ export default async function PostDetailPage(props: PageProps<'/posts/[id]'>) {
         <OrderPackagePanel packageCode={post.package_code} details={orderDetails} totalPrice={packageTotal} />
 
         <h1 className="mt-4 text-2xl font-bold text-zinc-900 dark:text-zinc-50">
-          {decodeEntities(post.title || post.og_title) || '(제목 없음)'}
+          {decodeEntities(post.title) || '(제목 없음)'}
         </h1>
         <div className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
           {new Date(post.created_at).toLocaleDateString('ko-KR')}
@@ -138,7 +155,7 @@ export default async function PostDetailPage(props: PageProps<'/posts/[id]'>) {
           {post.post_type === POST_TYPE.TEXT ? (
             <TextPostBody post={post} />
           ) : (
-            <LinkPostBody post={post} extracted={extracted} />
+            <LinkPostBody post={post} extracted={extracted} freshOg={freshOg} />
           )}
         </div>
 
@@ -180,9 +197,11 @@ function TextPostBody({ post }: { post: Post }) {
 function LinkPostBody({
   post,
   extracted,
+  freshOg,
 }: {
   post: Post;
   extracted: ExtractedArticle | null;
+  freshOg: OgMeta | null;
 }) {
   if (!post.external_url) return null;
 
@@ -191,8 +210,9 @@ function LinkPostBody({
     : null;
   // Instagram 임베드는 세로로 길어 16:9(aspect-video)에 안 맞음 → 별도 사이징.
   const isInstagram = post.source_platform === SOURCE_PLATFORM.INSTAGRAM;
-  // 임베드형(youtube/instagram)은 본문 추출을 안 하므로 og_description을 캡션으로 노출.
-  const caption = embedUrl ? decodeEntities(post.og_description) : '';
+  // 임베드형(youtube/instagram)은 본문 추출을 안 하므로 fresh OG description 을
+  // 캡션으로 노출. DB 의 og_description 은 더 이상 저장하지 않음.
+  const caption = embedUrl && freshOg?.description ? decodeEntities(freshOg.description) : '';
 
   let origin = '';
   try {
@@ -245,24 +265,24 @@ function LinkPostBody({
         // 블로그 본문을 서버에서 직접 추출 — 사이트 안에 인라인 렌더
         <ExtractedBody extracted={extracted} />
       ) : (
-        // 본문 추출도 실패 — OG 카드 폴백
+        // 본문 추출도 실패 — fresh OG 카드 폴백 (DB 에 og_* 저장 안 하므로 매번 fetch)
         <a
           href={post.external_url}
           target="_blank"
           rel="noopener noreferrer"
           className="block overflow-hidden rounded-lg border border-zinc-200 bg-white transition-shadow hover:shadow-md dark:border-zinc-800 dark:bg-zinc-950"
         >
-          {post.og_image && (
+          {freshOg?.image && (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={proxyIfNeeded(post.og_image) ?? ''} alt="" className="aspect-video w-full object-cover" />
+            <img src={proxyIfNeeded(freshOg.image) ?? ''} alt="" className="aspect-video w-full object-cover" />
           )}
           <div className="p-4">
             <div className="text-sm font-medium text-zinc-900 dark:text-zinc-50">
-              {decodeEntities(post.og_title) || post.external_url}
+              {freshOg?.title ? decodeEntities(freshOg.title) : post.external_url}
             </div>
-            {post.og_description && (
+            {freshOg?.description && (
               <p className="mt-1 line-clamp-2 text-xs text-zinc-600 dark:text-zinc-400">
-                {decodeEntities(post.og_description)}
+                {decodeEntities(freshOg.description)}
               </p>
             )}
             <div className="mt-2 text-[11px] text-zinc-500 dark:text-zinc-500">
