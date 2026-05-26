@@ -60,17 +60,14 @@ export async function updatePost(postId: string, formData: FormData) {
   if (!existing) throw new Error('게시글을 찾을 수 없습니다.');
   if (existing.user_id !== user.id) throw new Error('본인 글만 수정할 수 있어요.');
 
-  // 폼 데이터.
+  // 폼 데이터. og_*(외부 글 메타)는 저작권 의도로 수집하지 않음 — 폼이 보내도 무시.
   const title = s(formData.get('title'));
   const externalUrl = s(formData.get('external_url'));
-  const ogTitle = s(formData.get('og_title')) || null;
-  const ogDescription = s(formData.get('og_description')) || null;
-  const ogImage = s(formData.get('og_image')) || null;
   const coverFile = formData.get('cover_image');
   const removeCover = formData.get('remove_cover') === '1';
 
   if (!externalUrl) throw new Error('외부 링크 URL을 입력해 주세요.');
-  if (!title && !ogTitle) throw new Error('제목이 필요합니다.');
+  if (!title) throw new Error('제목이 필요합니다.');
 
   // 대표 이미지 처리.
   // - 새 파일 업로드 → 새 path 저장, 이전 파일은 best-effort 정리
@@ -97,18 +94,16 @@ export async function updatePost(postId: string, formData: FormData) {
     if (existing.cover_image) prevPathToDelete = extractStoragePath(existing.cover_image);
   }
 
-  // 제목은 char_length 1~200 제약 — og_title은 길이 무제한이라 200자로 클램프.
+  // 제목은 char_length 1~200 제약 — 코드포인트 단위 200자 클램프.
   const finalTitle =
-    [...(title || ogTitle || '(제목 없음)')].slice(0, 200).join('').trim() || '(제목 없음)';
+    [...title].slice(0, 200).join('').trim() || '(제목 없음)';
 
-  // DB 업데이트.
+  // DB 업데이트. og_* 컬럼은 건드리지 않음 — 기존 값은 그대로 두고, 신규 입력도 안 받음.
+  // (코드가 og_* 를 읽지 않으므로 잔존 값이 있어도 무영향)
   const updates: Record<string, unknown> = {
     title: finalTitle,
     external_url: externalUrl,
     source_platform: detectPlatform(externalUrl),
-    og_title: ogTitle,
-    og_description: ogDescription,
-    og_image: ogImage,
   };
   if (newCoverUrl !== undefined) updates.cover_image = newCoverUrl;
 
