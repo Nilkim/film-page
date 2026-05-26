@@ -8,6 +8,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { useFormStatus } from 'react-dom';
 import dynamic from 'next/dynamic';
 import { createPost } from './actions';
 import { proxyIfNeeded } from '@/lib/imageProxy';
@@ -516,15 +517,40 @@ export default function NewPostForm() {
                   : 'OG 제목을 못 가져왔어요. "제목 & 썸네일 수정하기"를 펼쳐 직접 입력해 주세요.'}
           </span>
         )}
-        <button
-          type="submit"
-          disabled={!canSubmit}
-          className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 disabled:opacity-50 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200"
-        >
-          게시
-        </button>
+        <SubmitButton disabled={!canSubmit} />
       </div>
     </form>
+  );
+}
+
+// 게시 버튼 — useFormStatus 로 server action 진행 중인지 자동 추적.
+// 클릭 후 cover 업로드/패키지 생성/INSERT/revalidate 가 직렬 실행되어 1~3초 걸리므로
+// 그동안 스피너 + '게시 중…' + disabled 로 사용자에게 진행 중임을 명시.
+function SubmitButton({ disabled }: { disabled: boolean }) {
+  const { pending } = useFormStatus();
+  return (
+    <button
+      type="submit"
+      disabled={disabled || pending}
+      className="inline-flex items-center justify-center gap-2 rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200"
+    >
+      {pending && <Spinner />}
+      <span>{pending ? '게시 중…' : '게시'}</span>
+    </button>
+  );
+}
+
+function Spinner() {
+  return (
+    <svg
+      className="h-4 w-4 animate-spin"
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+    >
+      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" opacity="0.25" />
+      <path d="M4 12a8 8 0 018-8" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+    </svg>
   );
 }
 
