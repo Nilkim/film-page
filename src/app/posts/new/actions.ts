@@ -35,8 +35,10 @@ export async function createPost(formData: FormData) {
     .getAll('order_codes')
     .map((v) => (typeof v === 'string' ? v.trim() : ''))
     .filter(Boolean);
-  // 외부 글 메타(og_title/description/image)는 저장하지 않음 — 저작권 의도로 우리
-  // DB 에 외부 콘텐츠 텍스트/이미지 URL 보관 안 함. 폼이 보내도 무시.
+  // og_title/og_description 은 저장하지 않음(저작권 의도). og_image 만 저장 —
+  // 사용자가 폼에서 OG 미리보기로 본 썸네일이 자기 작품의 시각적 식별자가 되며,
+  // cover_image 직접 업로드 안 한 경우 카드 썸네일로 사용된다(사용자 결정).
+  const ogImage = s(formData.get('og_image')) || null;
   const coverFile = formData.get('cover_image');
   const packageName = s(formData.get('package_name'));
 
@@ -96,8 +98,9 @@ export async function createPost(formData: FormData) {
   const finalTitle =
     [...title].slice(0, 200).join('').trim() || '(제목 없음)';
 
-  // 저작권 의도: og_title/og_description/og_image 컬럼은 row 에 포함하지 않아
-  // DB 에 NULL 로 저장됨. 외부 글 메타는 매 상세 페이지 요청마다 fresh fetch.
+  // 저작권 의도: og_title/og_description 은 row 에 포함하지 않아 DB NULL 로 저장.
+  // og_image 만 저장(카드 썸네일용). 상세 페이지의 title/description 은 매 요청
+  // fetchOgMeta 로 fresh fetch.
   const row = {
     user_id: user.id,
     title: finalTitle,
@@ -109,6 +112,7 @@ export async function createPost(formData: FormData) {
     post_type: POST_TYPE.LINK,
     external_url: externalUrl,
     source_platform: sourcePlatform,
+    og_image: ogImage,
   };
 
   const { data, error } = await supabase
