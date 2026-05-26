@@ -32,11 +32,12 @@ export default function PostCard({
   likeCount?: number;
   commentCount?: number;
 }) {
-  // 저작권 의도로 외부 글 메타(og_image)는 사용하지 않음. 카드 썸네일은
-  // 사용자 직접 업로드한 cover_image 만 사용 — 없으면 image_urls(있다면) 폴백,
-  // 그것도 없으면 'no image' 자리표시자.
+  // 카드 썸네일 우선순위: 사용자 직접 업로드(cover_image) → 외부 글 OG 이미지
+  // (사용자가 폼 미리보기로 본 후 등록한 작품 식별 이미지) → image_urls 폴백.
+  // 인스타 CDN 처럼 서명 토큰 만료 시 image-proxy 가 external_url 의 OG 재추출.
   const thumb =
     post.cover_image
+    ?? proxyIfNeeded(post.og_image, post.external_url)
     ?? proxyIfNeeded(post.image_urls?.[0])
     ?? null;
   const title = decodeEntities(post.title) || '(제목 없음)';
