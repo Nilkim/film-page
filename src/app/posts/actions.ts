@@ -60,9 +60,11 @@ export async function updatePost(postId: string, formData: FormData) {
   if (!existing) throw new Error('게시글을 찾을 수 없습니다.');
   if (existing.user_id !== user.id) throw new Error('본인 글만 수정할 수 있어요.');
 
-  // 폼 데이터. og_*(외부 글 메타)는 저작권 의도로 수집하지 않음 — 폼이 보내도 무시.
+  // 폼 데이터. og_title/og_description 은 저작권 의도로 수집하지 않음. og_image 만
+  // 수집(카드 썸네일용 — 사용자 결정).
   const title = s(formData.get('title'));
   const externalUrl = s(formData.get('external_url'));
+  const ogImage = s(formData.get('og_image')) || null;
   const coverFile = formData.get('cover_image');
   const removeCover = formData.get('remove_cover') === '1';
 
@@ -98,12 +100,13 @@ export async function updatePost(postId: string, formData: FormData) {
   const finalTitle =
     [...title].slice(0, 200).join('').trim() || '(제목 없음)';
 
-  // DB 업데이트. og_* 컬럼은 건드리지 않음 — 기존 값은 그대로 두고, 신규 입력도 안 받음.
-  // (코드가 og_* 를 읽지 않으므로 잔존 값이 있어도 무영향)
+  // DB 업데이트. og_title/og_description 은 건드리지 않음(잔존 값 있어도 코드가
+  // 안 읽음). og_image 는 카드 썸네일 갱신을 위해 매번 새 값으로 덮어씀.
   const updates: Record<string, unknown> = {
     title: finalTitle,
     external_url: externalUrl,
     source_platform: detectPlatform(externalUrl),
+    og_image: ogImage,
   };
   if (newCoverUrl !== undefined) updates.cover_image = newCoverUrl;
 
