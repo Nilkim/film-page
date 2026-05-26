@@ -32,17 +32,14 @@ export default function PostCard({
   likeCount?: number;
   commentCount?: number;
 }) {
-  // cover_image는 Supabase Storage URL이라 직접 표시(화이트리스트 미매치).
-  // og_image / image_urls는 외부 호스트일 때만 image-proxy 경유 — ORB 차단 회피.
-  //
-  // og_image에 external_url을 fallback으로 같이 넘긴다 — Instagram CDN처럼
-  // 서명 토큰이 만료된 경우 프록시가 OG 메타를 재추출해 자동 복구하도록.
+  // 저작권 의도로 외부 글 메타(og_image)는 사용하지 않음. 카드 썸네일은
+  // 사용자 직접 업로드한 cover_image 만 사용 — 없으면 image_urls(있다면) 폴백,
+  // 그것도 없으면 'no image' 자리표시자.
   const thumb =
     post.cover_image
-    ?? proxyIfNeeded(post.og_image, post.external_url)
     ?? proxyIfNeeded(post.image_urls?.[0])
     ?? null;
-  const title = decodeEntities(post.title || post.og_title) || '(제목 없음)';
+  const title = decodeEntities(post.title) || '(제목 없음)';
   const favicon = faviconUrl(post.external_url);
   const isOwner = !!currentUserId && currentUserId === post.user_id;
   const idx = index != null ? String(index).padStart(2, '0') : null;
