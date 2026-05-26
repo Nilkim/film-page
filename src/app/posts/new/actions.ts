@@ -35,9 +35,8 @@ export async function createPost(formData: FormData) {
     .getAll('order_codes')
     .map((v) => (typeof v === 'string' ? v.trim() : ''))
     .filter(Boolean);
-  const ogTitle = s(formData.get('og_title')) || null;
-  const ogDescription = s(formData.get('og_description')) || null;
-  const ogImage = s(formData.get('og_image')) || null;
+  // 외부 글 메타(og_title/description/image)는 저장하지 않음 — 저작권 의도로 우리
+  // DB 에 외부 콘텐츠 텍스트/이미지 URL 보관 안 함. 폼이 보내도 무시.
   const coverFile = formData.get('cover_image');
   const packageName = s(formData.get('package_name'));
 
@@ -52,7 +51,7 @@ export async function createPost(formData: FormData) {
   if (!externalUrl) {
     throw new Error('외부 링크 URL을 입력해 주세요.');
   }
-  if (!title && !ogTitle) {
+  if (!title) {
     throw new Error('제목을 입력해 주세요.');
   }
 
@@ -92,12 +91,13 @@ export async function createPost(formData: FormData) {
   // 항상 LINK 타입 — 내부 본문 작성 기능 제거됨. body는 빈 문자열로 저장.
   const sourcePlatform = detectPlatform(externalUrl);
 
-  // 제목은 DB 제약 char_length(title) between 1 and 200. og_title은 길이 무제한이라
-  // 그대로 쓰면 200자 초과로 INSERT가 거부됨 → 코드포인트 200자로 클램프.
+  // 제목은 DB 제약 char_length(title) between 1 and 200. 코드포인트 200자로 클램프.
   // (Array.from = 코드포인트 단위 → Postgres char_length와 일치, 서로게이트 쌍 안전)
   const finalTitle =
-    [...(title || ogTitle || '(제목 없음)')].slice(0, 200).join('').trim() || '(제목 없음)';
+    [...title].slice(0, 200).join('').trim() || '(제목 없음)';
 
+  // 저작권 의도: og_title/og_description/og_image 컬럼은 row 에 포함하지 않아
+  // DB 에 NULL 로 저장됨. 외부 글 메타는 매 상세 페이지 요청마다 fresh fetch.
   const row = {
     user_id: user.id,
     title: finalTitle,
@@ -109,9 +109,6 @@ export async function createPost(formData: FormData) {
     post_type: POST_TYPE.LINK,
     external_url: externalUrl,
     source_platform: sourcePlatform,
-    og_title: ogTitle,
-    og_description: ogDescription,
-    og_image: ogImage,
   };
 
   const { data, error } = await supabase
