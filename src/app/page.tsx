@@ -11,7 +11,9 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import Feed, { type FeedPost } from '@/components/Feed';
 import { createAnonClient } from '@/lib/supabase/anon';
-import { TABLE, type Post } from '@/lib/db';
+import { TABLE, PACKAGES_TABLE, type Post, type OrderPackage } from '@/lib/db';
+import { findOrdersByPhone } from '@/lib/orders';
+import { findPriceOverrides, resolvePrice } from '@/lib/pricing';
 
 export const revalidate = 60;
 
@@ -28,12 +30,53 @@ export default async function Home() {
     film_page_likes?: { count: number }[];
     film_page_comments?: { count: number }[];
   };
-  // client로 넘기기 전에 카운트를 평탄화 — Feed는 likeCount/commentCount만 본다.
-  const list: FeedPost[] = ((posts as Raw[] | null) ?? []).map((p) => ({
-    ...p,
-    likeCount: p.film_page_likes?.[0]?.count ?? 0,
-    commentCount: p.film_page_comments?.[0]?.count ?? 0,
-  }));
+
+  const rawList = ((posts as Raw[] | null) ?? []);
+  const packageCodes = rawList.map((p) => p.package_code).filter(Boolean);
+
+  // 패키지 일괄 로드 → phone 으로 그룹화하여 RPC 호출 횟수를 줄임.
+  const [{ data: pkgRows }, overrides] = await Promise.all([
+    supabase
+      .from(PACKAGES_TABLE)
+      .select('*')
+      .in('package_code', packageCodes),
+    findPriceOverrides(supabase, packageCodes),
+  ]);
+  const pkgByCode = new Map(((pkgRows ?? []) as OrderPackage[]).map((p) => [p.package_code, p]));
+
+  // phone → (order_code → total_price) 맵을 미리 만들어, 카드별 합산은 메모리에서.
+  const phoneSet = new Set<string>();
+  for (const pkg of pkgByCode.values()) if (pkg.phone) phoneSet.add(pkg.phone);
+  const phoneToPrices = new Map<string, Map<string, number>>();
+  await Promise.all(
+    Array.from(phoneSet).map(async (phone) => {
+      const summaries = await findOrdersByPhone(supabase, phone);
+      const m = new Map<string, number>();
+      for (const s of summaries) m.set(s.code, s.total_price ?? 0);
+      phoneToPrices.set(phone, m);
+    }),
+  );
+
+  // client로 넘기기 전에 카운트 평탄화 + 가격(노출가/원가/할인여부) 미리 계산.
+  const list: FeedPost[] = rawList.map((p) => {
+    const pkg = pkgByCode.get(p.package_code);
+    let liveOriginal = 0;
+    if (pkg?.phone) {
+      const codeToPrice = phoneToPrices.get(pkg.phone);
+      if (codeToPrice) {
+        liveOriginal = pkg.order_codes.reduce((sum, c) => sum + (codeToPrice.get(c) ?? 0), 0);
+      }
+    }
+    const priceView = resolvePrice(liveOriginal, overrides.get(p.package_code) ?? null);
+    return {
+      ...p,
+      likeCount: p.film_page_likes?.[0]?.count ?? 0,
+      commentCount: p.film_page_comments?.[0]?.count ?? 0,
+      displayPrice: priceView.displayPrice,
+      originalPrice: priceView.originalPrice,
+      hasDiscount: priceView.hasDiscount,
+    };
+  });
 
   return (
     <div className="mx-auto flex w-full max-w-[1440px] flex-1 flex-col px-[clamp(16px,4vw,40px)]">
