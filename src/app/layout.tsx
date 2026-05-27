@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { CartProvider } from "@/components/CartProvider";
 
 // 폰트는 globals.css에서 Pretendard(CDN variable)로 통일 — handoff 지정.
 // next/font(Geist)는 디자인 방향 변경으로 제거.
@@ -24,7 +25,7 @@ export default function RootLayout({
         버그는 그대로 보고됨.
       */}
       <body suppressHydrationWarning className="flex min-h-full flex-col">
-        {children}
+        <CartProvider>{children}</CartProvider>
       </body>
     </html>
   );
