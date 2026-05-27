@@ -14,7 +14,13 @@ import CreateCard from '@/components/CreateCard';
 import PostCard from '@/components/PostCard';
 import FeedControls from '@/components/FeedControls';
 
-export type FeedPost = Post & { likeCount: number; commentCount: number };
+export type FeedPost = Post & {
+  likeCount: number;
+  commentCount: number;
+  displayPrice: number;
+  originalPrice: number;
+  hasDiscount: boolean;
+};
 
 function FeedInner({ posts }: { posts: FeedPost[] }) {
   const sp = useSearchParams();
@@ -81,6 +87,9 @@ function FeedInner({ posts }: { posts: FeedPost[] }) {
             currentUserId={userId}
             likeCount={p.likeCount}
             commentCount={p.commentCount}
+            displayPrice={p.displayPrice}
+            originalPrice={p.originalPrice}
+            hasDiscount={p.hasDiscount}
           />
         ))}
       </div>
