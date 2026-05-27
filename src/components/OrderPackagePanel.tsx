@@ -9,6 +9,8 @@
 import { useState } from 'react';
 import dynamic from 'next/dynamic';
 import type { ShapeData } from '@/lib/shapeBounds';
+import PriceTag from '@/components/PriceTag';
+import AddToCartButton from '@/components/AddToCartButton';
 
 // OrderThumbnail / ShapeSizeList 모두 paper.js 의존 → SSR에서 깨짐. 클라이언트에서만 로드.
 const OrderThumbnail = dynamic(() => import('@/components/OrderThumbnail'), {
@@ -33,10 +35,24 @@ export default function OrderPackagePanel({
   packageCode,
   details,
   totalPrice = 0,
+  originalPrice = 0,
+  hasDiscount = false,
+  postId,
+  postTitle,
+  thumb,
 }: {
   packageCode: string;
   details: OrderDetail[];
+  // 노출가(할인 적용 후). 0 이면 가격 미표시.
   totalPrice?: number;
+  // 원가(취소선용). 할인 없으면 totalPrice 와 동일.
+  originalPrice?: number;
+  // 두 값이 다르면 true — 취소선 렌더.
+  hasDiscount?: boolean;
+  // 카트 담기용 식별자/표시명.
+  postId?: string;
+  postTitle?: string;
+  thumb?: string | null;
 }) {
   // 선택된 주문 코드(단일). 같은 칩 다시 누르면 닫힘.
   const [openCode, setOpenCode] = useState<string | null>(null);
@@ -54,10 +70,14 @@ export default function OrderPackagePanel({
         {packageCode || '—'}
       </div>
       {totalPrice > 0 && (
-        <div className="mt-0.5 text-[13px] text-ink-60">
-          패키지 가격{' '}
-          <span className="font-semibold text-ink">{totalPrice.toLocaleString('ko-KR')}원</span>
-        </div>
+        <PriceTag
+          className="mt-0.5"
+          label="패키지 가격"
+          displayPrice={totalPrice}
+          originalPrice={originalPrice || totalPrice}
+          hasDiscount={hasDiscount}
+          size="lg"
+        />
       )}
 
       {details.length > 0 && (
@@ -113,8 +133,19 @@ export default function OrderPackagePanel({
         </div>
       )}
 
-      {/* 우하단 네이버쇼핑 구매 링크 */}
-      <div className="mt-3 flex justify-end">
+      {/* 결제 CTA — film-artwork 자체 카트 + 레거시 네이버쇼핑 옵션 */}
+      <div className="mt-3 flex flex-wrap items-center justify-end gap-2">
+        {postId && postTitle && totalPrice > 0 && (
+          <AddToCartButton
+            packageCode={packageCode}
+            postId={postId}
+            title={postTitle}
+            thumb={thumb}
+            price={totalPrice}
+            originalPrice={originalPrice || totalPrice}
+            size="lg"
+          />
+        )}
         <a
           href={SMARTSTORE_URL}
           target="_blank"
