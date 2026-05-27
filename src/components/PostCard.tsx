@@ -15,6 +15,8 @@ import type { Post } from '@/lib/db';
 import { proxyIfNeeded } from '@/lib/imageProxy';
 import { decodeEntities } from '@/lib/htmlEntities';
 import PostCardActions from './PostCardActions';
+import PriceTag from './PriceTag';
+import AddToCartButton from './AddToCartButton';
 
 // 핸드오프 모션 easing — transform 계열에 공통 적용.
 const EASE = '[transition-timing-function:cubic-bezier(.2,.7,.2,1)]';
@@ -25,12 +27,18 @@ export default function PostCard({
   currentUserId,
   likeCount = 0,
   commentCount = 0,
+  displayPrice = 0,
+  originalPrice = 0,
+  hasDiscount = false,
 }: {
   post: Post;
   index?: number;
   currentUserId?: string | null;
   likeCount?: number;
   commentCount?: number;
+  displayPrice?: number;
+  originalPrice?: number;
+  hasDiscount?: boolean;
 }) {
   // 카드 썸네일 우선순위: 사용자 직접 업로드(cover_image) → 외부 글 OG 이미지
   // (사용자가 폼 미리보기로 본 후 등록한 작품 식별 이미지) → image_urls 폴백.
@@ -93,7 +101,7 @@ export default function PostCard({
         {/* 메타: 좌측 식별자, 우측 좋아요·댓글 통계.
             같은 OG 썸네일을 다른 사용자가 공유하는 경우(블로그/SNS reference)에도
             카드별 식별이 즉시 되도록 label(package_code) 가독성을 본문 수준으로 끌어올림. */}
-        <div className="flex items-center justify-between gap-2 px-3 pb-2.5 pt-1.5 text-[10.5px] text-ink-45">
+        <div className="flex items-center justify-between gap-2 px-3 pb-1.5 pt-1.5 text-[10.5px] text-ink-45">
           <span className="truncate font-medium text-ink-70">{label}</span>
           <span className="flex shrink-0 items-center gap-2 tabular-nums">
             <span className="inline-flex items-center gap-1" aria-label={`좋아요 ${likeCount}`}>
@@ -106,7 +114,35 @@ export default function PostCard({
             </span>
           </span>
         </div>
+
+        {/* 가격 행 — 포트원 '상품 등록 유무' 충족을 위한 노출. 없으면(가격 0) 자리 비움. */}
+        {displayPrice > 0 && (
+          <div className="px-3 pb-2.5">
+            <PriceTag
+              displayPrice={displayPrice}
+              originalPrice={originalPrice || displayPrice}
+              hasDiscount={hasDiscount}
+              size="sm"
+            />
+          </div>
+        )}
       </Link>
+
+      {/* 카트 담기 — 카드 외부에 sibling 배치(중첩 anchor 회피).
+          가격이 있어야만 노출. 우하단 absolute 가 아니라 카드 아래 행으로 자연 배치. */}
+      {displayPrice > 0 && (
+        <div className="mt-1 flex justify-end">
+          <AddToCartButton
+            packageCode={post.package_code}
+            postId={post.id}
+            title={title}
+            thumb={thumb}
+            price={displayPrice}
+            originalPrice={originalPrice || displayPrice}
+            size="sm"
+          />
+        </div>
+      )}
 
       {/* 본인 글에만 표시. sibling 배치라 카드 Link 클릭과 충돌 없음. */}
       {isOwner && <PostCardActions postId={post.id} />}
