@@ -42,10 +42,28 @@ export default function HeaderAuth() {
   if (!ready) return <div className="h-[31px]" aria-hidden="true" />;
 
   if (user) {
+    // OAuth provider 별로 avatar 필드 키가 달라 폴백 체인.
+    // Google: avatar_url 또는 picture / Kakao: avatar_url / Naver: profile_image.
+    const meta = user.user_metadata ?? {};
+    const avatarUrl: string | undefined =
+      meta.avatar_url ?? meta.picture ?? meta.profile_image;
+    const displayName = meta.full_name ?? meta.name ?? user.email;
+
     return (
       <nav className="flex items-center gap-3">
-        <span className="hidden text-xs tracking-[0.04em] text-ink-60 sm:inline">
-          {user.user_metadata?.full_name ?? user.email}
+        <span className="hidden items-center gap-2 text-xs tracking-[0.04em] text-ink-60 sm:inline-flex">
+          {avatarUrl && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={avatarUrl}
+              alt=""
+              className="size-6 rounded-full object-cover"
+              loading="lazy"
+              // 일부 provider 가 외부 referer 차단 → no-referrer 로 우회.
+              referrerPolicy="no-referrer"
+            />
+          )}
+          <span>{displayName}</span>
         </span>
         <form action={signOut}>
           <button type="submit" className={ACTION_BTN}>
