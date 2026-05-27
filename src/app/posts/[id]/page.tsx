@@ -15,6 +15,7 @@ import { unstable_cache } from 'next/cache';
 import { extractArticle, type ExtractedArticle } from '@/lib/extract';
 import { fetchOgMeta, type OgMeta } from '@/lib/og';
 import { findPackageByCode, findOrdersByPhone } from '@/lib/orders';
+import { findPriceOverride, resolvePrice } from '@/lib/pricing';
 import { proxyIfNeeded } from '@/lib/imageProxy';
 import { decodeEntities } from '@/lib/htmlEntities';
 import LikeButton from '@/components/LikeButton';
@@ -92,6 +93,13 @@ export default async function PostDetailPage(props: PageProps<'/posts/[id]'>) {
     packageTotal = orderCodes.reduce((sum, code) => sum + (byCode.get(code)?.total_price ?? 0), 0);
   }
 
+  // 관리자 가격 오버라이드 — 있으면 packageTotal(원가) 위에 노출가를 덮어쓴다.
+  // 정책: 노출가는 원가 이하만 허용(인상 금지). pricing.resolvePrice 가 그 검사 포함.
+  const override = post.package_code
+    ? await findPriceOverride(supabase, post.package_code)
+    : null;
+  const priceView = resolvePrice(packageTotal, override);
+
   // 블로그 등 임베드 불가 외부 링크는 서버에서 본문 HTML을 직접 추출해서
   // 우리 페이지 안에 인라인 렌더한다. 실패 시 null → OG 카드 폴백.
   let extracted: ExtractedArticle | null = null;
@@ -132,7 +140,16 @@ export default async function PostDetailPage(props: PageProps<'/posts/[id]'>) {
         </Link>
 
         {/* 상단 패키지 강조 영역 — 페이지 진입 시 가장 먼저 보이게. 칩 클릭 시 상세. */}
-        <OrderPackagePanel packageCode={post.package_code} details={orderDetails} totalPrice={packageTotal} />
+        <OrderPackagePanel
+          packageCode={post.package_code}
+          details={orderDetails}
+          totalPrice={priceView.displayPrice}
+          originalPrice={priceView.originalPrice}
+          hasDiscount={priceView.hasDiscount}
+          postId={post.id}
+          postTitle={decodeEntities(post.title) || '(제목 없음)'}
+          thumb={post.cover_image ?? proxyIfNeeded(post.og_image, post.external_url) ?? null}
+        />
 
         <h1 className="mt-4 text-2xl font-bold text-zinc-900 dark:text-zinc-50">
           {decodeEntities(post.title) || '(제목 없음)'}
