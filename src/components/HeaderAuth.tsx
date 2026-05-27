@@ -8,6 +8,8 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { signOut } from '@/app/actions/auth';
+import { isAdminEmail } from '@/lib/admin';
+import CartButton from '@/components/CartButton';
 import type { User } from '@supabase/supabase-js';
 
 // 사각 테두리 버튼: hover 시 잉크 채움 + 텍스트 반전.
@@ -39,7 +41,15 @@ export default function HeaderAuth() {
   }, []);
 
   // 세션 확인 전에는 깜빡임을 줄이려고 자리만 비워둔다.
-  if (!ready) return <div className="h-[31px]" aria-hidden="true" />;
+  // 카트 버튼은 인증 상태와 무관하므로 항상 노출.
+  if (!ready) {
+    return (
+      <nav className="flex items-center gap-3">
+        <CartButton />
+        <div className="h-[31px]" aria-hidden="true" />
+      </nav>
+    );
+  }
 
   if (user) {
     // OAuth provider 별로 avatar 필드 키가 달라 폴백 체인.
@@ -49,8 +59,22 @@ export default function HeaderAuth() {
       meta.avatar_url ?? meta.picture ?? meta.profile_image;
     const displayName = meta.full_name ?? meta.name ?? user.email;
 
+    const admin = isAdminEmail(user.email);
+
     return (
       <nav className="flex items-center gap-3">
+        <CartButton />
+        <Link href="/orders/lookup" className="hidden text-xs tracking-[0.04em] text-ink-60 hover:text-ink sm:inline">
+          주문조회
+        </Link>
+        {admin && (
+          <Link
+            href="/admin"
+            className="hidden whitespace-nowrap border border-ink-60 px-2.5 py-1 text-[11px] uppercase tracking-[0.12em] text-ink-60 transition-colors hover:border-ink hover:text-ink sm:inline-block"
+          >
+            관리자
+          </Link>
+        )}
         <span className="hidden items-center gap-2 text-xs tracking-[0.04em] text-ink-60 sm:inline-flex">
           {avatarUrl && (
             // eslint-disable-next-line @next/next/no-img-element
@@ -76,6 +100,10 @@ export default function HeaderAuth() {
 
   return (
     <nav className="flex items-center gap-3">
+      <CartButton />
+      <Link href="/orders/lookup" className="hidden text-xs tracking-[0.04em] text-ink-60 hover:text-ink sm:inline">
+        주문조회
+      </Link>
       <Link href="/login" className={ACTION_BTN}>
         로그인
       </Link>
