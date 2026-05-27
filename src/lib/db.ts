@@ -71,3 +71,28 @@ export const STORAGE = {
 
 // 패키지 테이블.
 export const PACKAGES_TABLE = 'film_page_order_packages';
+
+// 가격 오버라이드 — 관리자가 패키지 단가를 원가 이하로 덮어쓰는 단일 행 테이블.
+// 같은 package_code 에 한 행. 행이 없으면 오버라이드 없음(원가 그대로 노출).
+export const PRICE_OVERRIDES_TABLE = 'film_page_price_overrides';
+
+// film-artwork 자체 주문 — 결제 시 1행. FilmCutting 의 orders 와 별개.
+export const FA_ORDERS_TABLE = 'film_page_orders';
+
+// 관리자 화이트리스트(옵션). env ADMIN_EMAILS 가 1순위.
+export const ADMIN_EMAILS_TABLE = 'film_page_admin_emails';
+
+// 익명 주문조회 RPC — 전화번호 + 주문번호 매칭 시에만 반환.
+export const ORDER_LOOKUP_RPC = 'get_order_by_phone_and_no';
+
+// 주문번호 채번 RPC.
+export const NEXT_ORDER_NO_RPC = 'next_film_page_order_no';
+
+// 가격 오버라이드 행 타입.
+export type PriceOverride = {
+  package_code: string;
+  original_price: number;
+  override_price: number;
+  reason: string | null;
+  set_at: string;
+};
