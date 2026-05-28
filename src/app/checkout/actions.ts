@@ -22,6 +22,7 @@ export type CreatePendingArgs = {
   customer: {
     name: string;
     phone: string;
+    email: string;
     addr: string;
     addrDetail?: string;
     postal?: string;
@@ -45,6 +46,9 @@ function validate(args: CreatePendingArgs): string | null {
   if (!c.name || c.name.trim().length < 2) return '이름을 2자 이상 입력해 주세요.';
   if (!normalizePhone(c.phone) || normalizePhone(c.phone).length < 9) {
     return '전화번호를 정확히 입력해 주세요.';
+  }
+  if (!c.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(c.email.trim())) {
+    return '이메일을 정확히 입력해 주세요. (이니시스 결제는 이메일 필수)';
   }
   if (!c.addr || c.addr.trim().length < 5) return '주소를 입력해 주세요.';
   if (!['kakao', 'naver', 'google'].includes(args.pgProvider)) {
@@ -75,6 +79,7 @@ export async function createPendingOrder(args: CreatePendingArgs): Promise<Creat
           order_no: candidate,
           customer_name: args.customer.name.trim(),
           customer_phone: normalizePhone(args.customer.phone),
+          customer_email: args.customer.email.trim(),
           customer_addr: args.customer.addr.trim(),
           customer_addr_detail: args.customer.addrDetail?.trim() || null,
           customer_postal: args.customer.postal?.trim() || null,

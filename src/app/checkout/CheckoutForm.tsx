@@ -19,6 +19,10 @@ import { getClientConfig, providerLabel, type PgProvider } from '@/lib/portone';
 
 const PROVIDERS: PgProvider[] = ['kakao', 'naver', 'google'];
 
+// PG 결제창의 customer.email 필수 요건(KG이니시스 V2 등)을 위해 회사 이메일을 자동 사용.
+// 영수증·결제확인은 코틸레돈에서 받아 별도 채널로 고객 응대.
+const SHOP_EMAIL = 'cotyledon79@naver.com';
+
 export default function CheckoutForm() {
   const router = useRouter();
   const { cart, ready, subtotal, originalTotal, clear } = useCart();
@@ -65,6 +69,7 @@ export default function CheckoutForm() {
         customer: {
           name: name.trim(),
           phone: phone.trim(),
+          email: SHOP_EMAIL,
           addr: addr.trim(),
           addrDetail: addrDetail.trim() || undefined,
           postal: postal.trim() || undefined,
@@ -104,6 +109,7 @@ export default function CheckoutForm() {
         customer: {
           fullName: name.trim(),
           phoneNumber: phone.trim(),
+          email: SHOP_EMAIL,
         },
         customData: { orderNo: res.orderNo },
         // 모바일 환경에서 결제창이 redirect 형식이 될 때만 사용. 같은 도메인의 완료 페이지.
@@ -154,6 +160,9 @@ export default function CheckoutForm() {
               />
             </Field>
           </div>
+          <p className="mt-2 text-[11px] text-ink-45">
+            결제·영수증 안내는 {SHOP_EMAIL} 으로 발송돼요. 별도 안내가 필요하면 결제 후 주문조회에서 요청해 주세요.
+          </p>
         </section>
 
         <section className="rounded-[6px] border border-card-line bg-card p-4">

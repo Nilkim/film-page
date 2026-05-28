@@ -41,6 +41,7 @@ create table if not exists public.film_page_orders (
     order_no             text unique not null,                  -- 사람용: FA-YYYYMMDD-XXXX
     customer_name        text not null check (char_length(customer_name) between 1 and 60),
     customer_phone       text not null,                          -- 정규화: 숫자만 (생성 시 처리)
+    customer_email       text,                                    -- 영수증·주문확인 발송용. KG이니시스 V2 일반결제는 필수.
     customer_addr        text not null check (char_length(customer_addr) between 1 and 200),
     customer_addr_detail text,
     customer_postal      text,
@@ -59,6 +60,10 @@ create table if not exists public.film_page_orders (
     created_at           timestamptz not null default now(),
     paid_at              timestamptz
 );
+
+-- 이미 운영 중인 DB 에 컬럼 멱등 추가 (재실행 안전).
+alter table public.film_page_orders
+    add column if not exists customer_email text;
 
 create index if not exists film_page_orders_phone_idx
     on public.film_page_orders (customer_phone);
