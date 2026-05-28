@@ -55,7 +55,19 @@ export async function POST(req: NextRequest) {
     const res = await client.payment.getPayment({ paymentId });
     payment = res as unknown as PaymentShape;
   } catch (e) {
-    console.warn('[webhook] getPayment failed:', (e as Error).message);
+    // PortOne SDK 가 던지는 에러는 RestError(=HTTP 에러) 또는 일반 Error.
+    // 404 (= 해당 paymentId 의 결제 record 없음) 는 테스트 발송이거나 propagate 지연.
+    // 200 으로 응답해 webhook 재시도 폭주를 막고, 진짜 결제는 다음 webhook 또는 클라이언트 polling 으로 확정.
+    const err = e as { status?: number; name?: string; message?: string };
+    const msg = err.message ?? '';
+    const isNotFound =
+      err.status === 404 ||
+      /not.?found/i.test(msg) ||
+      /PaymentNotFound/i.test(err.name ?? '');
+    console.warn('[webhook] getPayment failed:', { paymentId, status: err.status, name: err.name, msg });
+    if (isNotFound) {
+      return new Response('ignored: payment not found (test send or propagation delay)', { status: 200 });
+    }
     return new Response('payment fetch failed', { status: 502 });
   }
 
