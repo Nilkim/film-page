@@ -38,6 +38,29 @@ export function providerLabel(p: PgProvider): string {
   }
 }
 
+// PortOne V2 결제수단 페이로드 — KG이니시스 V2 기준.
+//   - 카카오·네이버: EASY_PAY + easyPay.easyPayProvider
+//   - 구글페이: 이니시스 V2 의 EASY_PAY 범주에 없음 → CARD 로 fallback
+//     (사용자가 구글페이 버튼을 눌러도 결제창에서 카드 결제 → 본인 카드 등록되어 있으면 구글페이 카드로 결제 가능)
+//
+// PortOne SDK 는 string literal union 으로 좁힌 타입을 요구 — as const 로 literal 유지.
+export function payPayload(p: PgProvider) {
+  switch (p) {
+    case 'kakao':
+      return {
+        payMethod: 'EASY_PAY',
+        easyPay: { easyPayProvider: 'EASY_PAY_PROVIDER_KAKAOPAY' },
+      } as const;
+    case 'naver':
+      return {
+        payMethod: 'EASY_PAY',
+        easyPay: { easyPayProvider: 'EASY_PAY_PROVIDER_NAVERPAY' },
+      } as const;
+    case 'google':
+      return { payMethod: 'CARD' } as const;
+  }
+}
+
 // 전화번호 정규화 — 숫자만. 비교/저장 일관성용. RPC 측 정규식과 동일.
 export function normalizePhone(raw: string): string {
   return (raw ?? '').replace(/\D/g, '');
