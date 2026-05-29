@@ -27,6 +27,57 @@ export const dynamic = 'force-dynamic';
 
 const NAVER_ME = 'https://openapi.naver.com/v1/nid/me';
 
+// 이 프로바이더 식별자 — 이미 이 provider 로 가입된 계정이면 정상 재로그인이므로 차단 안 함.
+const SELF_PROVIDER = 'custom:naver';
+
+// 같은 이메일이 *다른* provider 계정에 이미 있으면 가입을 막는다(병합 방지 정책).
+// 네이버 응답에서 얻은 이메일로 public.email_login_providers RPC(service-role)를 호출해 판단.
+//
+// 반환:
+//   { block: false }                      → 진행 허용(신규 or 네이버 재로그인)
+//   { block: true, provider: 'kakao' }    → 차단(다른 provider 가 이미 점유)
+//
+// 실패 시 fail-open(허용) — 일시적 DB 오류로 정상 로그인을 막는 게 병합보다 더 나쁜 UX.
+async function checkEmailConflict(
+  email: string,
+): Promise<{ block: boolean; provider?: string }> {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !serviceKey) {
+    console.warn('[naver-userinfo] service-role env 없음 — 중복 검사 skip(fail-open)');
+    return { block: false };
+  }
+
+  try {
+    const res = await fetch(`${url.replace(/\/$/, '')}/rest/v1/rpc/email_login_providers`, {
+      method: 'POST',
+      headers: {
+        apikey: serviceKey,
+        Authorization: `Bearer ${serviceKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ p_email: email }),
+      cache: 'no-store',
+    });
+    if (!res.ok) {
+      console.warn(`[naver-userinfo] 중복 검사 RPC ${res.status} — fail-open`);
+      return { block: false };
+    }
+    const providers = (await res.json()) as string[] | null;
+    if (!Array.isArray(providers) || providers.length === 0) {
+      return { block: false }; // 이 이메일로 가입된 계정 없음 → 신규 허용
+    }
+    if (providers.includes(SELF_PROVIDER)) {
+      return { block: false }; // 이미 네이버로 가입된 계정 → 정상 재로그인 허용
+    }
+    // 다른 provider 가 이 이메일을 점유 중 → 차단
+    return { block: true, provider: providers[0] };
+  } catch {
+    console.warn('[naver-userinfo] 중복 검사 예외 — fail-open');
+    return { block: false };
+  }
+}
+
 // 캐시 절대 금지 헤더 — 사용자별 응답이라 공유 캐시에 걸리면 정보 유출.
 const NO_STORE = {
   'Cache-Control': 'no-store, private, max-age=0, must-revalidate',
@@ -88,6 +139,19 @@ export async function GET(request: NextRequest) {
   }
 
   const email = typeof r.email === 'string' ? r.email : undefined;
+
+  // 중복 이메일 차단 정책: 이 이메일이 다른 provider 계정에 이미 있으면 가입을 막는다.
+  // non-2xx body 는 GoTrue 가 error_description 으로 콜백 URL 에 실어 보내므로,
+  // 앱의 /auth/callback 이 'EMAIL_TAKEN:<provider>' 센티넬을 읽어 한글 경고를 띄운다.
+  if (email) {
+    const conflict = await checkEmailConflict(email);
+    if (conflict.block) {
+      return new NextResponse(`EMAIL_TAKEN:${conflict.provider ?? 'other'}`, {
+        status: 409,
+        headers: { ...NO_STORE, 'Content-Type': 'text/plain' },
+      });
+    }
+  }
 
   // response.* 를 표준 OIDC 스타일 최상위 클레임으로 평탄화.
   // (GoTrue Claims 구조체가 인식하는 키: sub, email, email_verified, name, picture …)
