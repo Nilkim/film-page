@@ -16,7 +16,6 @@ import { proxyIfNeeded } from '@/lib/imageProxy';
 import { decodeEntities } from '@/lib/htmlEntities';
 import PostCardActions from './PostCardActions';
 import PriceTag from './PriceTag';
-import AddToCartButton from './AddToCartButton';
 
 // 핸드오프 모션 easing — transform 계열에 공통 적용.
 const EASE = '[transition-timing-function:cubic-bezier(.2,.7,.2,1)]';
@@ -127,22 +126,6 @@ export default function PostCard({
           </div>
         )}
       </Link>
-
-      {/* 카트 담기 — 카드 외부에 sibling 배치(중첩 anchor 회피).
-          가격이 있어야만 노출. 우하단 absolute 가 아니라 카드 아래 행으로 자연 배치. */}
-      {displayPrice > 0 && (
-        <div className="mt-1 flex justify-end">
-          <AddToCartButton
-            packageCode={post.package_code}
-            postId={post.id}
-            title={title}
-            thumb={thumb}
-            price={displayPrice}
-            originalPrice={originalPrice || displayPrice}
-            size="sm"
-          />
-        </div>
-      )}
 
       {/* 본인 글에만 표시. sibling 배치라 카드 Link 클릭과 충돌 없음. */}
       {isOwner && <PostCardActions postId={post.id} />}
