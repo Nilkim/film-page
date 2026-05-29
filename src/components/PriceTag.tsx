@@ -23,16 +23,12 @@ export default function PriceTag({
   const wrapClass = size === 'lg'
     ? 'text-[13px] text-ink-60'
     : 'text-[11px] text-ink-60';
-  const priceClass = size === 'lg'
-    ? 'font-semibold text-ink'
-    : 'font-semibold text-ink';
+  const priceClass = 'font-semibold text-ink';
+  // 한국 쇼핑몰 표준 — 원가 빨간 취소선 + 할인가 빨간 강조.
   const struckClass = size === 'lg'
-    ? 'text-[12px] text-ink-45 line-through'
-    : 'text-[10px] text-ink-45 line-through';
-  // 할인 폭 — 시각적 강조 색(빨강 톤은 디자인 톤 깨므로 ink 진하게 + 굵게로만)
-  const saleClass = size === 'lg'
-    ? 'font-bold text-ink'
-    : 'font-bold text-ink';
+    ? 'text-[12px] text-red-500 line-through decoration-red-500'
+    : 'text-[10px] text-red-500 line-through decoration-red-500';
+  const saleClass = 'font-bold text-red-600';
 
   if (displayPrice <= 0) return null;
 
