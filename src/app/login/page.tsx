@@ -14,8 +14,17 @@
 import { createClient } from '@/lib/supabase/client';
 import type { Provider } from '@supabase/supabase-js';
 import Link from 'next/link';
+import { useEffect, useState } from 'react';
 
 export default function LoginPage() {
+  // /auth/callback 이 OAuth 에러(예: 중복 이메일 차단)를 ?error=<한글메시지> 로 넘겨준다.
+  // useSearchParams 의 Suspense 요구를 피하려 client 에서 location 을 직접 읽는다.
+  const [notice, setNotice] = useState<string | null>(null);
+  useEffect(() => {
+    const err = new URLSearchParams(window.location.search).get('error');
+    if (err) setNotice(err);
+  }, []);
+
   const login = async (provider: string) => {
     const supabase = createClient();
     const origin = window.location.origin;
@@ -37,6 +46,15 @@ export default function LoginPage() {
         <p className="mb-6 text-sm text-zinc-600 dark:text-zinc-400">
           글 작성 / 댓글 / 좋아요는 로그인이 필요해요. 구경은 비로그인으로 가능합니다.
         </p>
+
+        {notice && (
+          <div
+            role="alert"
+            className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-300"
+          >
+            {notice}
+          </div>
+        )}
 
         <div className="space-y-2.5">
           {/* Google — 흰 배경 */}
