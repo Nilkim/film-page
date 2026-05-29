@@ -11,7 +11,7 @@ import HeaderAuth from '@/components/HeaderAuth';
 export default function Header() {
   return (
     <header className="border-b border-ink">
-      <div className="mx-auto flex w-full max-w-[1440px] items-center justify-between px-[clamp(16px,4vw,40px)] py-[18px]">
+      <div className="mx-auto flex w-full max-w-[1440px] flex-col items-start gap-2 px-[clamp(16px,4vw,40px)] py-[14px] sm:flex-row sm:items-center sm:justify-between sm:gap-0 sm:py-[18px]">
         {/* 브랜드 클러스터: 마크 + 워드마크 + COTYLEDON */}
         <Link href="/" className="flex items-center gap-2.5 text-ink hover:opacity-90">
           <span className="inline-flex text-ink leading-none" aria-hidden="true">
