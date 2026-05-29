@@ -57,16 +57,18 @@ function FeedInner({ posts }: { posts: FeedPost[] }) {
 
   return (
     <main className="flex-1">
-      {/* 섹션 헤딩 행 — 좌측 H1 + 우측 글쓰기/내글보기/정렬 컨트롤 */}
-      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-3 py-[26px] pb-4">
-        <h1 className="text-[clamp(20px,2.4vw,24px)] font-bold tracking-[-0.02em] text-balance">
+      {/* 섹션 헤딩 행 — 모바일: 타이틀 위, 컨트롤 아래 한 줄 / 데스크탑: 좌 타이틀 + 우 컨트롤 */}
+      <div className="flex flex-col items-start gap-3 py-5 sm:flex-row sm:flex-wrap sm:items-baseline sm:justify-between sm:gap-x-4 sm:gap-y-3 sm:py-[26px] sm:pb-4">
+        <h1 className="text-[18px] font-bold tracking-[-0.02em] text-balance sm:text-[clamp(20px,2.4vw,24px)]">
           자신만의 필름아트웍 자랑해보세요
         </h1>
-        <div className="flex flex-wrap items-center gap-2">
+        {/* 컨트롤 — 글쓰기·정렬 칩 모두 같은 높이(py-[5px]·text-[11px])로 통일.
+            모바일에서 한 줄 안 들어가면 자연 wrap. 가로 스크롤 대신 wrap 으로 — 작은 액션은 다 보여야 함. */}
+        <div className="flex w-full flex-wrap items-center gap-1.5 sm:w-auto sm:gap-2">
           {isLoggedIn && (
             <Link
               href="/posts/new"
-              className="whitespace-nowrap border border-ink bg-ink px-3.5 py-[7px] text-xs tracking-[0.08em] text-bg transition-colors duration-150 hover:bg-transparent hover:text-ink"
+              className="whitespace-nowrap border border-ink bg-ink px-2.5 py-[5px] text-[11px] tracking-[0.06em] text-bg transition-colors duration-150 hover:bg-transparent hover:text-ink"
             >
               + 글쓰기
             </Link>
