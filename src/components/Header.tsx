@@ -37,13 +37,14 @@ export default function Header() {
               <line x1="15" y1="11" x2="31" y2="11" strokeDasharray="2.2 2.2" />
             </svg>
           </span>
-          <span className="text-[20px] font-bold tracking-[-0.02em]">
+          <span className="whitespace-nowrap text-[18px] font-bold tracking-[-0.02em] sm:text-[20px]">
             FilmArtwork
-            <span className="ml-1 font-medium tracking-[-0.01em] text-ink-60">
+            {/* 한국어 보조 라벨·COTYLEDON 은 모바일에서 숨김(폭 절약) */}
+            <span className="ml-1 hidden font-medium tracking-[-0.01em] text-ink-60 sm:inline">
               필름아트웍
             </span>
           </span>
-          <span className="text-[10px] tracking-[0.32em] text-ink-60">
+          <span className="hidden text-[10px] tracking-[0.32em] text-ink-60 sm:inline">
             — COTYLEDON
           </span>
         </Link>
