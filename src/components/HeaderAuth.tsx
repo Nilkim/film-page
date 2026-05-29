@@ -44,7 +44,7 @@ export default function HeaderAuth() {
   // 카트 버튼은 인증 상태와 무관하므로 항상 노출.
   if (!ready) {
     return (
-      <nav className="flex items-center gap-3">
+      <nav className="flex w-full items-center justify-end gap-2 sm:w-auto sm:gap-3">
         <CartButton />
         <div className="h-[31px]" aria-hidden="true" />
       </nav>
@@ -62,15 +62,15 @@ export default function HeaderAuth() {
     const admin = isAdminEmail(user.email);
 
     return (
-      <nav className="flex items-center gap-3">
+      <nav className="flex w-full flex-wrap items-center justify-end gap-2 sm:w-auto sm:gap-3">
         <CartButton />
-        <Link href="/orders/lookup" className="hidden text-xs tracking-[0.04em] text-ink-60 hover:text-ink sm:inline">
+        <Link href="/orders/lookup" className="whitespace-nowrap text-xs tracking-[0.04em] text-ink-60 hover:text-ink">
           주문조회
         </Link>
         {admin && (
           <Link
             href="/admin"
-            className="hidden whitespace-nowrap border border-ink-60 px-2.5 py-1 text-[11px] uppercase tracking-[0.12em] text-ink-60 transition-colors hover:border-ink hover:text-ink sm:inline-block"
+            className="inline-block whitespace-nowrap border border-ink-60 px-2.5 py-1 text-[11px] uppercase tracking-[0.12em] text-ink-60 transition-colors hover:border-ink hover:text-ink"
           >
             관리자
           </Link>
@@ -99,9 +99,9 @@ export default function HeaderAuth() {
   }
 
   return (
-    <nav className="flex items-center gap-3">
+    <nav className="flex w-full flex-wrap items-center justify-end gap-2 sm:w-auto sm:gap-3">
       <CartButton />
-      <Link href="/orders/lookup" className="hidden text-xs tracking-[0.04em] text-ink-60 hover:text-ink sm:inline">
+      <Link href="/orders/lookup" className="whitespace-nowrap text-xs tracking-[0.04em] text-ink-60 hover:text-ink">
         주문조회
       </Link>
       <Link href="/login" className={ACTION_BTN}>
