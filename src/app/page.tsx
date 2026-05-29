@@ -11,6 +11,7 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import Feed, { type FeedPost } from '@/components/Feed';
 import { createAnonClient } from '@/lib/supabase/anon';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { TABLE, PACKAGES_TABLE, type Post, type OrderPackage } from '@/lib/db';
 import { findOrdersByPhone } from '@/lib/orders';
 import { findPriceOverrides, resolvePrice } from '@/lib/pricing';
@@ -35,12 +36,15 @@ export default async function Home() {
   const packageCodes = rawList.map((p) => p.package_code).filter(Boolean);
 
   // 패키지 일괄 로드 → phone 으로 그룹화하여 RPC 호출 횟수를 줄임.
+  // price_overrides 는 RLS SELECT 정책이 누락된 경우에도 보이도록 service-role 로 fetch
+  // (server-only, cookies 안 부르므로 ISR 캐시 영향 0).
+  const adminSupabase = createAdminClient();
   const [{ data: pkgRows }, overrides] = await Promise.all([
     supabase
       .from(PACKAGES_TABLE)
       .select('*')
       .in('package_code', packageCodes),
-    findPriceOverrides(supabase, packageCodes),
+    findPriceOverrides(adminSupabase, packageCodes),
   ]);
   const pkgByCode = new Map(((pkgRows ?? []) as OrderPackage[]).map((p) => [p.package_code, p]));
 
