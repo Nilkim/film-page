@@ -16,6 +16,7 @@ import { extractArticle, type ExtractedArticle } from '@/lib/extract';
 import { fetchOgMeta, type OgMeta } from '@/lib/og';
 import { findPackageByCode, findOrdersByPhone } from '@/lib/orders';
 import { findPriceOverride, resolvePrice } from '@/lib/pricing';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { proxyIfNeeded } from '@/lib/imageProxy';
 import { decodeEntities } from '@/lib/htmlEntities';
 import LikeButton from '@/components/LikeButton';
@@ -94,9 +95,9 @@ export default async function PostDetailPage(props: PageProps<'/posts/[id]'>) {
   }
 
   // 관리자 가격 오버라이드 — 있으면 packageTotal(원가) 위에 노출가를 덮어쓴다.
-  // 정책: 노출가는 원가 이하만 허용(인상 금지). pricing.resolvePrice 가 그 검사 포함.
+  // RLS SELECT 정책 누락 케이스 대비해 service-role 로 직접 fetch (cookies 미사용 → ISR OK).
   const override = post.package_code
-    ? await findPriceOverride(supabase, post.package_code)
+    ? await findPriceOverride(createAdminClient(), post.package_code)
     : null;
   const priceView = resolvePrice(packageTotal, override);
 
