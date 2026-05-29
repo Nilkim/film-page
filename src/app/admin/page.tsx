@@ -1,18 +1,16 @@
 // 관리자 대시보드 인덱스 — 단순 진입점.
 import Link from 'next/link';
-import { createAnonClient } from '@/lib/supabase/anon';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { TABLE, FA_ORDERS_TABLE, PRICE_OVERRIDES_TABLE } from '@/lib/db';
 
 export default async function AdminIndex() {
-  const supabase = createAnonClient();
-  // 통계 — 가볍게 head count.
-  const [posts, overrides] = await Promise.all([
+  // 관리자 영역 — service-role 로 RLS 무관하게 통계 카운트(주문/오버라이드 등).
+  const supabase = createAdminClient();
+  const [posts, overrides, orders] = await Promise.all([
     supabase.from(TABLE.POSTS).select('id', { count: 'exact', head: true }),
     supabase.from(PRICE_OVERRIDES_TABLE).select('package_code', { count: 'exact', head: true }),
+    supabase.from(FA_ORDERS_TABLE).select('id', { count: 'exact', head: true }),
   ]);
-  // 주문은 anon SELECT 차단이라 count 0 으로 나옴 — admin layout 통과한 사용자라
-  // 정상 카운트가 필요하면 service-role 헬퍼로 분기해야 하지만, 이 화면은 진입점이라 생략.
-  const orders = await supabase.from(FA_ORDERS_TABLE).select('id', { count: 'exact', head: true });
 
   return (
     <div className="space-y-6">
