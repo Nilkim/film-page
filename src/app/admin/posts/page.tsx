@@ -4,7 +4,7 @@
 // 원가는 패키지의 phone 으로 RPC 호출해 합산. N+1 비용이 있지만 admin 화면이라
 // 트래픽이 적고 캐시되지 않아 OK.
 import Link from 'next/link';
-import { createAnonClient } from '@/lib/supabase/anon';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { TABLE, PACKAGES_TABLE, type Post, type OrderPackage } from '@/lib/db';
 import { findOrdersByPhone } from '@/lib/orders';
 import { findPriceOverrides } from '@/lib/pricing';
@@ -13,7 +13,10 @@ import PriceOverrideRow from './PriceOverrideRow';
 export const dynamic = 'force-dynamic';
 
 export default async function AdminPostsPage() {
-  const supabase = createAnonClient();
+  // 관리자 페이지는 layout 게이트 통과 후라 service-role 사용 OK.
+  // anon 키로 SELECT 하면 price_overrides RLS 정책(select_all) 이 누락된 경우
+  // 행이 안 보여 "DB 에는 있는데 화면엔 없음" 현상이 생긴다 — 그 회피.
+  const supabase = createAdminClient();
 
   // 최근 게시물 50개. 더 많아지면 페이지네이션 추가.
   const { data: postRows } = await supabase
