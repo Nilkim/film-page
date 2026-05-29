@@ -41,7 +41,9 @@ export async function setPriceOverride(formData: FormData): Promise<PriceOverrid
     assertAdmin(user?.email);
 
     const admin = createAdminClient();
-    const { error } = await admin
+    // .select().single() 로 RETURNING 받기 — 실제 들어간 row 확인.
+    // 안 들어갔는데 silent success 처리되는 케이스(테이블 미존재 등) 즉시 잡힘.
+    const { data, error } = await admin
       .from(PRICE_OVERRIDES_TABLE)
       .upsert(
         {
@@ -53,8 +55,24 @@ export async function setPriceOverride(formData: FormData): Promise<PriceOverrid
           set_at: new Date().toISOString(),
         },
         { onConflict: 'package_code' },
-      );
-    if (error) return { ok: false, error: error.message };
+      )
+      .select()
+      .single();
+
+    if (error) {
+      // 흔한 원인을 사람말로 풀어서 반환 — 사용자가 즉시 진단 가능.
+      const msg = error.message;
+      if (/relation .* does not exist/i.test(msg) || /could not find the table/i.test(msg)) {
+        return { ok: false, error: `테이블 미존재: Supabase SQL Editor 에서 supabase/cart-payments.sql 을 먼저 실행하세요. (${msg})` };
+      }
+      if (/row-level security/i.test(msg) || /permission denied/i.test(msg)) {
+        return { ok: false, error: `RLS 차단: SUPABASE_SERVICE_ROLE_KEY 가 Netlify 환경변수에 정확히 들어갔는지 확인하세요. (${msg})` };
+      }
+      return { ok: false, error: msg };
+    }
+    if (!data) {
+      return { ok: false, error: '저장은 시도됐지만 RETURNING 데이터가 없습니다. 테이블 존재 여부 + service-role 키 확인 필요.' };
+    }
 
     // 카드(홈) / 상세 모두 가격 반영.
     revalidatePath('/');
