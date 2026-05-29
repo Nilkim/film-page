@@ -15,7 +15,7 @@ import Link from 'next/link';
 import { useCart } from '@/components/CartProvider';
 import PriceTag from '@/components/PriceTag';
 import { createPendingOrder } from './actions';
-import { getClientConfig, providerLabel, type PgProvider } from '@/lib/portone';
+import { getClientConfig, providerLabel, payPayload, type PgProvider } from '@/lib/portone';
 
 const PROVIDERS: PgProvider[] = ['kakao', 'naver', 'google'];
 
@@ -105,7 +105,9 @@ export default function CheckoutForm() {
         orderName: orderName.slice(0, 80),
         totalAmount: total,
         currency: 'CURRENCY_KRW',
-        payMethod: 'EASY_PAY',
+        // payMethod + easyPay.easyPayProvider 2단 구조 — provider 별로 매핑.
+        // 구글페이는 KG이니시스 V2 미지원이라 CARD 로 fallback.
+        ...payPayload(provider),
         customer: {
           fullName: name.trim(),
           phoneNumber: phone.trim(),
