@@ -96,3 +96,41 @@ export type PriceOverride = {
   reason: string | null;
   set_at: string;
 };
+
+// 발송 상태 — paid 이후 운영 흐름.
+export const FULFILLMENT = {
+  AWAITING:   'awaiting',   // 결제 완료, 관리자 처리 대기
+  PREPARING:  'preparing',  // 제작·포장 진행 중
+  SHIPPED:    'shipped',    // 발송 완료(운송장 등록됨)
+  DELIVERED:  'delivered',  // 배송 완료
+} as const;
+export type FulfillmentStatus = (typeof FULFILLMENT)[keyof typeof FULFILLMENT];
+
+// film-artwork 자체 주문 행 타입.
+export type FaOrder = {
+  id: string;
+  order_no: string;
+  customer_name: string;
+  customer_phone: string;
+  customer_email: string | null;
+  customer_addr: string;
+  customer_addr_detail: string | null;
+  customer_postal: string | null;
+  customer_notify_email: string | null;
+  items: unknown;
+  subtotal: number;
+  discount: number;
+  total: number;
+  pg_provider: string;
+  pg_tx_id: string | null;
+  pg_status: 'pending' | 'paid' | 'failed' | 'cancelled' | 'refunded';
+  fulfillment_status: FulfillmentStatus;
+  tracking_carrier: string | null;
+  tracking_number: string | null;
+  shipped_at: string | null;
+  delivered_at: string | null;
+  admin_memo: string | null;
+  memo: string | null;
+  created_at: string;
+  paid_at: string | null;
+};
