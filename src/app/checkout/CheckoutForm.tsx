@@ -29,6 +29,7 @@ export default function CheckoutForm() {
   const [provider, setProvider] = useState<PgProvider>('kakao');
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
+  const [notifyEmail, setNotifyEmail] = useState('');
   const [postal, setPostal] = useState('');
   const [addr, setAddr] = useState('');
   const [addrDetail, setAddrDetail] = useState('');
@@ -70,6 +71,7 @@ export default function CheckoutForm() {
           name: name.trim(),
           phone: phone.trim(),
           email: SHOP_EMAIL,
+          notifyEmail: notifyEmail.trim() || undefined,
           addr: addr.trim(),
           addrDetail: addrDetail.trim() || undefined,
           postal: postal.trim() || undefined,
@@ -161,9 +163,20 @@ export default function CheckoutForm() {
                 className={inputCls}
               />
             </Field>
+            <div className="sm:col-span-2">
+              <Field label="알림 이메일 (선택)">
+                <input
+                  type="email"
+                  value={notifyEmail}
+                  onChange={(e) => setNotifyEmail(e.target.value)}
+                  placeholder="결제·발송 알림을 받을 이메일 (비워두면 발송 X)"
+                  className={inputCls}
+                />
+              </Field>
+            </div>
           </div>
           <p className="mt-2 text-[11px] text-ink-45">
-            결제·영수증 안내는 {SHOP_EMAIL} 으로 발송돼요. 별도 안내가 필요하면 결제 후 주문조회에서 요청해 주세요.
+            결제창에는 회사 이메일({SHOP_EMAIL}) 이 자동 입력됩니다. 위 알림 이메일을 입력하시면 결제완료·발송완료 안내를 받으실 수 있어요.
           </p>
         </section>
 
