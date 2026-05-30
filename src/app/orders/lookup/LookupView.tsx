@@ -9,8 +9,9 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { ORDER_LOOKUP_RPC } from '@/lib/db';
+import { ORDER_LOOKUP_RPC, type FulfillmentStatus } from '@/lib/db';
 import { normalizePhone } from '@/lib/portone';
+import { CARRIER_LABELS, trackingUrl } from '@/lib/mail';
 import PriceTag from '@/components/PriceTag';
 import type { CartItem } from '@/lib/cart';
 
@@ -25,6 +26,12 @@ type OrderRow = {
   pg_status: 'pending' | 'paid' | 'failed' | 'cancelled' | 'refunded';
   created_at: string;
   paid_at: string | null;
+  // 발송 정보(RPC 갱신 후 반환)
+  fulfillment_status: FulfillmentStatus;
+  tracking_carrier: string | null;
+  tracking_number: string | null;
+  shipped_at: string | null;
+  delivered_at: string | null;
 };
 
 export default function LookupView() {
@@ -127,6 +134,9 @@ export default function LookupView() {
 
 function OrderDetailCard({ row }: { row: OrderRow }) {
   const hasDiscount = row.discount > 0;
+  const trackUrl = trackingUrl(row.tracking_carrier, row.tracking_number);
+  const showFulfillment = row.pg_status === 'paid';
+
   return (
     <section className="mt-6 space-y-4">
       <div className="rounded-[6px] border border-card-line bg-card p-5">
@@ -148,6 +158,50 @@ function OrderDetailCard({ row }: { row: OrderRow }) {
           />
         </div>
       </div>
+
+      {/* 배송 진행 — 결제완료 주문만 노출 */}
+      {showFulfillment && (
+        <div className="rounded-[6px] border border-card-line bg-card p-5">
+          <h2 className="text-sm font-semibold text-ink">배송 진행</h2>
+          <FulfillmentSteps current={row.fulfillment_status} />
+
+          <div className="mt-4 grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
+            <Field
+              label="발송일시"
+              value={row.shipped_at ? new Date(row.shipped_at).toLocaleString('ko-KR') : '—'}
+            />
+            <Field
+              label="배송완료"
+              value={row.delivered_at ? new Date(row.delivered_at).toLocaleString('ko-KR') : '—'}
+            />
+            <Field
+              label="택배사"
+              value={row.tracking_carrier ? (CARRIER_LABELS[row.tracking_carrier] ?? row.tracking_carrier) : '—'}
+            />
+            <Field label="운송장 번호" value={row.tracking_number ?? '—'} mono />
+          </div>
+
+          {trackUrl && (
+            <div className="mt-4">
+              <a
+                href={trackUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 rounded-full bg-ink px-4 py-2 text-xs font-semibold text-bg transition-opacity hover:opacity-90"
+              >
+                택배 추적하기 ↗
+              </a>
+            </div>
+          )}
+
+          {!row.tracking_number && row.fulfillment_status !== 'awaiting' && (
+            <p className="mt-3 text-xs text-ink-60">운송장 번호가 등록되면 자동으로 표시돼요.</p>
+          )}
+          {row.fulfillment_status === 'awaiting' && (
+            <p className="mt-3 text-xs text-ink-60">주문 확인 후 곧 제작·발송이 시작돼요. 발송 시 알림 이메일을 보내드립니다(이메일 입력하신 경우).</p>
+          )}
+        </div>
+      )}
 
       <div className="rounded-[6px] border border-card-line bg-card p-4">
         <h2 className="text-sm font-semibold text-ink">주문 항목</h2>
@@ -213,11 +267,44 @@ function StatusBadge({ status }: { status: OrderRow['pg_status'] }) {
   );
 }
 
-function Field({ label, value }: { label: string; value: string }) {
+function Field({ label, value, mono = false }: { label: string; value: string; mono?: boolean }) {
   return (
     <div>
       <div className="text-[10px] uppercase tracking-[0.18em] text-ink-45">{label}</div>
-      <div className="mt-0.5 text-sm text-ink">{value}</div>
+      <div className={'mt-0.5 text-sm text-ink ' + (mono ? 'font-mono' : '')}>{value}</div>
+    </div>
+  );
+}
+
+// 배송 4단계 진행바 — admin OrderRow 의 Steps 와 같은 시각 패턴, 고객 친화 라벨.
+function FulfillmentSteps({ current }: { current: FulfillmentStatus }) {
+  const order: FulfillmentStatus[] = ['awaiting', 'preparing', 'shipped', 'delivered'];
+  const idx = order.indexOf(current);
+  const labels = ['주문 접수', '제작·준비', '발송 완료', '배송 완료'];
+  return (
+    <div className="mt-3 grid grid-cols-4 gap-1">
+      {labels.map((label, i) => {
+        const done = i <= idx;
+        const isActive = i === idx;
+        return (
+          <div key={label} className="flex flex-col items-center text-center">
+            <div
+              className={
+                'h-1 w-full rounded-full transition-colors ' +
+                (done ? 'bg-ink' : 'bg-ink-10')
+              }
+            />
+            <span
+              className={
+                'mt-1.5 text-[11px] ' +
+                (isActive ? 'font-bold text-ink' : done ? 'text-ink-70' : 'text-ink-45')
+              }
+            >
+              {label}
+            </span>
+          </div>
+        );
+      })}
     </div>
   );
 }
