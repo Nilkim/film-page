@@ -22,7 +22,8 @@ export type CreatePendingArgs = {
   customer: {
     name: string;
     phone: string;
-    email: string;
+    email: string;          // 결제창 customer.email — 회사 메일 통일
+    notifyEmail?: string;   // 고객 본인 메일(선택) — 결제확인·발송알림 수신용
     addr: string;
     addrDetail?: string;
     postal?: string;
@@ -80,6 +81,7 @@ export async function createPendingOrder(args: CreatePendingArgs): Promise<Creat
           customer_name: args.customer.name.trim(),
           customer_phone: normalizePhone(args.customer.phone),
           customer_email: args.customer.email.trim(),
+          customer_notify_email: args.customer.notifyEmail?.trim() || null,
           customer_addr: args.customer.addr.trim(),
           customer_addr_detail: args.customer.addrDetail?.trim() || null,
           customer_postal: args.customer.postal?.trim() || null,
@@ -89,6 +91,7 @@ export async function createPendingOrder(args: CreatePendingArgs): Promise<Creat
           total: args.total,
           pg_provider: args.pgProvider,
           pg_status: 'pending',
+          fulfillment_status: 'awaiting',
           memo: args.customer.memo?.trim() || null,
         });
       if (!insErr) {
