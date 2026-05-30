@@ -65,6 +65,27 @@ create table if not exists public.film_page_orders (
 alter table public.film_page_orders
     add column if not exists customer_email text;
 
+-- ─── 발송(fulfillment) 관련 컬럼 ─────────────────────
+-- pg_status 가 결제 진행 단계라면, fulfillment_status 는 그 다음 단계(준비·발송·배송).
+-- 결제 완료(paid) 직후 'awaiting' 으로 시작 → 관리자가 'preparing' → 'shipped' → 'delivered'.
+alter table public.film_page_orders
+    add column if not exists fulfillment_status text not null default 'awaiting',
+    add column if not exists tracking_carrier text,           -- 'cj' | 'hanjin' | 'lotte' | 'epost' | 'custom' 등
+    add column if not exists tracking_number text,
+    add column if not exists shipped_at timestamptz,
+    add column if not exists delivered_at timestamptz,
+    add column if not exists admin_memo text,
+    add column if not exists customer_notify_email text;      -- 고객이 결제 폼에서 별도 입력한 알림용 이메일
+
+alter table public.film_page_orders
+    drop constraint if exists film_page_orders_fulfillment_status_check;
+alter table public.film_page_orders
+    add constraint film_page_orders_fulfillment_status_check
+    check (fulfillment_status in ('awaiting', 'preparing', 'shipped', 'delivered'));
+
+create index if not exists film_page_orders_fulfillment_idx
+    on public.film_page_orders (fulfillment_status);
+
 create index if not exists film_page_orders_phone_idx
     on public.film_page_orders (customer_phone);
 create index if not exists film_page_orders_created_at_idx
@@ -158,23 +179,30 @@ create or replace function public.get_order_by_phone_and_no(
     p_order_no text
 )
 returns table (
-    order_no       text,
-    customer_name  text,
-    items          jsonb,
-    subtotal       integer,
-    discount       integer,
-    total          integer,
-    pg_provider    text,
-    pg_status      text,
-    created_at     timestamptz,
-    paid_at        timestamptz
+    order_no            text,
+    customer_name       text,
+    items               jsonb,
+    subtotal            integer,
+    discount            integer,
+    total               integer,
+    pg_provider         text,
+    pg_status           text,
+    created_at          timestamptz,
+    paid_at             timestamptz,
+    fulfillment_status  text,
+    tracking_carrier    text,
+    tracking_number     text,
+    shipped_at          timestamptz,
+    delivered_at        timestamptz
 )
 language sql
 security definer
 stable
 as $$
     select o.order_no, o.customer_name, o.items, o.subtotal, o.discount, o.total,
-           o.pg_provider, o.pg_status, o.created_at, o.paid_at
+           o.pg_provider, o.pg_status, o.created_at, o.paid_at,
+           o.fulfillment_status, o.tracking_carrier, o.tracking_number,
+           o.shipped_at, o.delivered_at
     from public.film_page_orders o
     where regexp_replace(o.customer_phone, '\D', '', 'g')
           = regexp_replace(coalesce(p_phone, ''), '\D', '', 'g')
