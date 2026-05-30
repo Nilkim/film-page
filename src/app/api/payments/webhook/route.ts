@@ -12,6 +12,7 @@ import { NextRequest } from 'next/server';
 import * as PortOne from '@portone/server-sdk';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { FA_ORDERS_TABLE } from '@/lib/db';
+import { sendPaymentConfirmation } from '@/lib/mail';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -85,7 +86,7 @@ export async function POST(req: NextRequest) {
   const supabase = createAdminClient();
   const { data: existing, error: selErr } = await supabase
     .from(FA_ORDERS_TABLE)
-    .select('order_no, total, pg_status')
+    .select('order_no, total, pg_status, customer_name, customer_notify_email, items')
     .eq('order_no', paymentId)
     .maybeSingle();
   if (selErr || !existing) {
@@ -120,6 +121,25 @@ export async function POST(req: NextRequest) {
     .eq('order_no', paymentId);
   if (updErr) {
     return new Response(updErr.message, { status: 500 });
+  }
+
+  // paid 전환 시점 → 고객 알림 이메일 발송 (selective, notify_email 입력한 경우만).
+  // mail 헬퍼는 RESEND_API_KEY 없으면 skip 하므로 키 미설정 환경에서도 안전.
+  if (next === 'paid' && existing.customer_notify_email) {
+    const items = (existing.items as Array<{ title: string; qty: number }> | null) ?? [];
+    const orderName = items.length === 0
+      ? undefined
+      : items.length === 1
+        ? items[0].title
+        : `${items[0].title} 외 ${items.length - 1}건`;
+    // fire-and-forget — webhook 응답 지연 방지. 실패해도 결제 상태는 paid 로 유지.
+    sendPaymentConfirmation({
+      to: existing.customer_notify_email,
+      orderNo: existing.order_no,
+      customerName: existing.customer_name,
+      total: existing.total,
+      orderName,
+    }).catch((e) => console.warn('[webhook] 결제확인 메일 실패:', (e as Error).message));
   }
 
   return new Response('ok', { status: 200 });
