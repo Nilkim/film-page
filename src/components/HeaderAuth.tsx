@@ -7,6 +7,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { PackageSearch, Settings, LogIn, LogOut } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { signOut } from '@/app/actions/auth';
 import { isAdminEmail } from '@/lib/admin';
@@ -72,13 +73,13 @@ export default function HeaderAuth() {
         <CartButton />
 
         <Link href="/orders/lookup" className={ICON_BTN} aria-label="주문조회">
-          <LookupIcon />
+          <PackageSearch strokeWidth={1.6} className="h-[18px] w-[18px] sm:h-4 sm:w-4" aria-hidden="true" />
           <span className="hidden sm:inline">주문조회</span>
         </Link>
 
         {admin && (
           <Link href="/admin" className={ICON_BTN} aria-label="관리자">
-            <AdminIcon />
+            <Settings strokeWidth={1.6} className="h-[18px] w-[18px] sm:h-4 sm:w-4" aria-hidden="true" />
             <span className="hidden sm:inline">관리자</span>
           </Link>
         )}
@@ -100,7 +101,7 @@ export default function HeaderAuth() {
 
         <form action={signOut}>
           <button type="submit" className={ICON_BTN_PRIMARY} aria-label="로그아웃">
-            <LogoutIcon />
+            <LogOut strokeWidth={1.6} className="h-[18px] w-[18px] sm:h-4 sm:w-4" aria-hidden="true" />
             <span className="hidden sm:inline">로그아웃</span>
           </button>
         </form>
@@ -113,94 +114,14 @@ export default function HeaderAuth() {
     <nav className="flex w-full items-center justify-end gap-2 sm:w-auto sm:gap-2">
       <CartButton />
       <Link href="/orders/lookup" className={ICON_BTN} aria-label="주문조회">
-        <LookupIcon />
+        <PackageSearch strokeWidth={1.6} className="h-[18px] w-[18px] sm:h-4 sm:w-4" aria-hidden="true" />
         <span className="hidden sm:inline">주문조회</span>
       </Link>
       <Link href="/login" className={ICON_BTN_PRIMARY} aria-label="로그인">
-        <LoginIcon />
+        <LogIn strokeWidth={1.6} className="h-[18px] w-[18px] sm:h-4 sm:w-4" aria-hidden="true" />
         <span className="hidden sm:inline">로그인</span>
       </Link>
     </nav>
   );
 }
 
-// ─── 픽토그램 ─────────────────────────────────────
-// 모두 24×24 viewBox, stroke-only, currentColor — 모바일/데스크탑 동일 굵기.
-
-function LookupIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.6"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="h-[18px] w-[18px] sm:h-4 sm:w-4"
-      aria-hidden="true"
-    >
-      {/* 영수증 + 돋보기 — 주문 검색 의미 */}
-      <path d="M7 3h8l3 3v13a1 1 0 0 1-1.4.9l-1.6-.7-1.6.8-1.6-.8-1.6.8-1.6-.8-1.6.7A1 1 0 0 1 6 19V4a1 1 0 0 1 1-1z" />
-      <line x1="9" y1="8" x2="14" y2="8" />
-      <line x1="9" y1="11.5" x2="14" y2="11.5" />
-      <circle cx="11.5" cy="15.5" r="1.6" />
-    </svg>
-  );
-}
-
-function AdminIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.6"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="h-[18px] w-[18px] sm:h-4 sm:w-4"
-      aria-hidden="true"
-    >
-      {/* 톱니바퀴 — 설정/관리자 의미 */}
-      <circle cx="12" cy="12" r="3" />
-      <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" />
-    </svg>
-  );
-}
-
-function LogoutIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.6"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="h-[18px] w-[18px] sm:h-4 sm:w-4"
-      aria-hidden="true"
-    >
-      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-      <polyline points="16 17 21 12 16 7" />
-      <line x1="21" y1="12" x2="9" y2="12" />
-    </svg>
-  );
-}
-
-function LoginIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.6"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="h-[18px] w-[18px] sm:h-4 sm:w-4"
-      aria-hidden="true"
-    >
-      <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
-      <polyline points="10 17 15 12 10 7" />
-      <line x1="15" y1="12" x2="3" y2="12" />
-    </svg>
-  );
-}
