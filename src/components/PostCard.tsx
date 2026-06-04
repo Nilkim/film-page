@@ -50,7 +50,8 @@ export default function PostCard({
   const title = decodeEntities(post.title) || '(제목 없음)';
   const favicon = faviconUrl(post.external_url);
   const isOwner = !!currentUserId && currentUserId === post.user_id;
-  const idx = index != null ? String(index).padStart(2, '0') : null;
+  // index prop 은 호출 측에서 여전히 전달하지만 카드에 노출하지 않음(사용자 결정).
+  void index;
   const label = post.package_code || (post.order_code ? `주문 ${post.order_code}` : '');
 
   return (
@@ -84,13 +85,8 @@ export default function PostCard({
           )}
         </div>
 
-        {/* 본문: idx + 제목(2-line clamp) */}
-        <div className="flex items-baseline gap-2.5 border-t border-ink-10 px-3 pb-2 pt-2.5">
-          {idx && (
-            <span className="text-[10px] font-bold tabular-nums tracking-[0.08em] text-ink-70">
-              {idx}
-            </span>
-          )}
+        {/* 본문: 제목(2-line clamp). 카드 순번 idx 는 노출 안 함(사용자 결정). */}
+        <div className="border-t border-ink-10 px-3 pb-2 pt-2.5">
           {/* min-h-[2.8em]: 제목이 1줄이어도 2줄 높이를 예약 → 같은 행 카드 높이 통일 */}
           <span className="line-clamp-2 min-h-[2.8em] text-[13px] font-semibold leading-[1.4] text-ink text-pretty">
             {title}
