@@ -5,6 +5,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
+import { ArrowRight } from 'lucide-react';
 import type { FaOrder } from '@/lib/db';
 import { markPreparing, markShipped, markDelivered, setAdminMemo } from './actions';
 import { CARRIER_LABELS, trackingUrl } from '@/lib/mail';
@@ -169,8 +170,8 @@ export default function OrderRow({ order }: { order: FaOrder }) {
                     className="w-full rounded border border-card-line bg-bg px-2 py-1.5 font-mono text-sm focus:border-ink focus:outline-none"
                   />
                   {trackUrl && (
-                    <a href={trackUrl} target="_blank" rel="noopener noreferrer" className="block text-[11px] text-ink-60 underline">
-                      현재 운송장 추적 →
+                    <a href={trackUrl} target="_blank" rel="noopener noreferrer" className="text-[11px] text-ink-60 underline" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                      현재 운송장 추적 <ArrowRight size={15} aria-hidden="true" />
                     </a>
                   )}
                 </div>
