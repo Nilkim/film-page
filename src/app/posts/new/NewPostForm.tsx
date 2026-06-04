@@ -12,6 +12,7 @@ import { useFormStatus } from 'react-dom';
 import dynamic from 'next/dynamic';
 import { createPost } from './actions';
 import { proxyIfNeeded } from '@/lib/imageProxy';
+import { useOgFetch } from '@/app/posts/_useOgFetch';
 
 // OrderThumbnail은 paper.js 의존 → SSR에서 jsdom 체인 끌어와 빌드 깨짐.
 // `ssr: false`로 클라이언트에서만 로드.
@@ -28,12 +29,6 @@ const OrderThumbnail = dynamic(() => import('@/components/OrderThumbnail'), {
 // import type은 런타임에 사라져 SSR 그래프에 안 들어감.
 import type { ShapeData } from '@/lib/shapeBounds';
 
-type OgState = {
-  title: string;
-  description: string;
-  image: string;
-  platform: string;
-};
 type OrderSummary = {
   code: string;
   created_at: string;
@@ -41,7 +36,6 @@ type OrderSummary = {
   film_snapshot: { color_hex?: string; name?: string } | null;
 };
 
-const EMPTY_OG: OgState = { title: '', description: '', image: '', platform: '' };
 const PHONE_LS_KEY = 'film_page:last_phone';
 
 export default function NewPostForm() {
@@ -65,13 +59,15 @@ export default function NewPostForm() {
   // === 외부 링크 + 제목 ===
   const [url, setUrl] = useState('');
   const [title, setTitle] = useState('');
-  const [og, setOg] = useState<OgState>(EMPTY_OG);
-  const [ogLoading, setOgLoading] = useState(false);
-  const [ogError, setOgError] = useState<string | null>(null);
-  const ogDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const lastOgUrl = useRef<string>('');
-  // 사용자가 제목을 직접 수정했는지 — true면 OG 제목으로 덮어쓰지 않음.
-  const titleDirty = useRef(false);
+  // URL → OG 자동 fetch (디바운스 + abort + titleDirty 게이팅) 공통 훅.
+  // 작성 폼: URL 비면 OG 초기화(resetOnEmpty), 에러 시 OG 비움(resetOgOnError).
+  const { og, ogLoading, ogError, titleDirty, onTitleChange, resetTitleFromOg } = useOgFetch({
+    url,
+    title,
+    setTitle,
+    resetOnEmpty: true,
+    resetOgOnError: true,
+  });
 
   // === 대표 이미지 ===
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
@@ -125,21 +121,28 @@ export default function NewPostForm() {
       return;
     }
     setPkgCheck({ checking: true, available: null, reason: null });
+    // OG fetch 와 동일 패턴 — 이전 요청을 abort 해 느린 응답이 새 입력의 결과를
+    // 덮어쓰지 않게(stale availability 방지).
+    const ac = new AbortController();
     pkgDebounceRef.current = setTimeout(async () => {
       try {
-        const res = await fetch(`/api/packages/check?code=${encodeURIComponent(name)}`);
+        const res = await fetch(`/api/packages/check?code=${encodeURIComponent(name)}`, { signal: ac.signal });
         const data = await res.json();
+        if (ac.signal.aborted) return;
         setPkgCheck({
           checking: false,
           available: !!data.available,
           reason: data.reason ?? null,
         });
-      } catch {
+      } catch (e) {
+        if ((e as Error).name === 'AbortError') return;
         setPkgCheck({ checking: false, available: null, reason: '확인 실패 — 다시 시도해 주세요.' });
       }
     }, 500);
     return () => {
       if (pkgDebounceRef.current) clearTimeout(pkgDebounceRef.current);
+      // 다음 키 입력/언마운트 시 진행 중 요청 취소.
+      ac.abort();
     };
   }, [packageName]);
 
@@ -150,74 +153,6 @@ export default function NewPostForm() {
       else next.add(code);
       return next;
     });
-  }
-
-  // URL 변경 → 디바운스 → OG fetch → 제목 자동 갱신(사용자가 수정 안 한 경우)
-  useEffect(() => {
-    if (ogDebounceRef.current) clearTimeout(ogDebounceRef.current);
-    const trimmed = url.trim();
-    if (!trimmed) {
-      setOg(EMPTY_OG);
-      setOgError(null);
-      lastOgUrl.current = '';
-      return;
-    }
-    if (!/^https?:\/\//i.test(trimmed)) return;
-
-    // 이전 진행 중 fetch는 cleanup에서 abort — 느린 응답이 새 URL의 결과를 덮어쓰지 않도록.
-    const ac = new AbortController();
-
-    ogDebounceRef.current = setTimeout(async () => {
-      if (trimmed === lastOgUrl.current) return;
-      lastOgUrl.current = trimmed;
-      setOgLoading(true);
-      setOgError(null);
-      try {
-        const res = await fetch(`/api/og?url=${encodeURIComponent(trimmed)}`, { signal: ac.signal });
-        if (!res.ok) {
-          const err = await res.json().catch(() => ({}));
-          throw new Error(err.error || `HTTP ${res.status}`);
-        }
-        const data = await res.json();
-        // 응답 도착 시점에 URL이 또 바뀌었으면 이 응답은 stale — 무시.
-        if (ac.signal.aborted) return;
-        const next: OgState = {
-          title: data.title ?? '',
-          description: data.description ?? '',
-          image: data.image ?? '',
-          platform: data.platform ?? '',
-        };
-        setOg(next);
-        // 사용자가 직접 수정한 적 없으면 OG 제목을 항상 갱신 (URL 바꿔도 즉시 반영)
-        if (!titleDirty.current && next.title) {
-          setTitle(next.title);
-        }
-      } catch (e) {
-        if ((e as Error).name === 'AbortError') return;
-        setOgError(e instanceof Error ? e.message : '미리보기 가져오기 실패');
-        setOg(EMPTY_OG);
-      } finally {
-        if (!ac.signal.aborted) setOgLoading(false);
-      }
-    }, 600);
-
-    return () => {
-      if (ogDebounceRef.current) clearTimeout(ogDebounceRef.current);
-      // URL이 또 바뀌면 진행 중 fetch 취소. AbortController로 race condition 방지.
-      ac.abort();
-    };
-  }, [url]);
-
-  function onTitleChange(e: React.ChangeEvent<HTMLInputElement>) {
-    titleDirty.current = true;
-    setTitle(e.target.value);
-  }
-
-  // "OG 제목으로 다시 채우기" — 사용자가 수동 수정 후에도 한 번에 복원 가능.
-  function resetTitleFromOg() {
-    if (!og.title) return;
-    titleDirty.current = false;
-    setTitle(og.title);
   }
 
   function onCoverChange(e: React.ChangeEvent<HTMLInputElement>) {
