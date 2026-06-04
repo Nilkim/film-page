@@ -11,6 +11,7 @@
 'use client';
 
 import Link from 'next/link';
+import { Heart, MessageCircle } from 'lucide-react';
 import type { Post } from '@/lib/db';
 import { proxyIfNeeded } from '@/lib/imageProxy';
 import { decodeEntities } from '@/lib/htmlEntities';
@@ -100,11 +101,11 @@ export default function PostCard({
           <span className="truncate font-medium text-ink-70">{label}</span>
           <span className="flex shrink-0 items-center gap-2 tabular-nums">
             <span className="inline-flex items-center gap-1" aria-label={`좋아요 ${likeCount}`}>
-              <span aria-hidden="true">♥</span>
+              <Heart size={14} aria-hidden="true" />
               {likeCount}
             </span>
             <span className="inline-flex items-center gap-1" aria-label={`댓글 ${commentCount}`}>
-              <CommentIcon />
+              <MessageCircle size={12} aria-hidden="true" />
               {commentCount}
             </span>
           </span>
@@ -140,22 +141,4 @@ function faviconUrl(url: string | null | undefined): string | null {
   } catch {
     return null;
   }
-}
-
-function CommentIcon() {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="h-3 w-3"
-      aria-hidden="true"
-    >
-      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-    </svg>
-  );
 }
