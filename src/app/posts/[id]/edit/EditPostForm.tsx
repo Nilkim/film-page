@@ -7,102 +7,35 @@
 //   - 기존 cover_image가 있으면 "이미지 제거" 옵션 제공
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { updatePost } from '@/app/posts/actions';
 import type { Post } from '@/lib/db';
 import { proxyIfNeeded } from '@/lib/imageProxy';
-
-type OgState = {
-  title: string;
-  description: string;
-  image: string;
-  platform: string;
-};
-const EMPTY_OG: OgState = { title: '', description: '', image: '', platform: '' };
+import { useOgFetch } from '@/app/posts/_useOgFetch';
 
 export default function EditPostForm({ post }: { post: Post }) {
   const [url, setUrl] = useState(post.external_url ?? '');
   const [title, setTitle] = useState(post.title ?? '');
-  const [og, setOg] = useState<OgState>({
-    title: post.og_title ?? '',
-    description: post.og_description ?? '',
-    image: post.og_image ?? '',
-    platform: post.source_platform ?? '',
+  // URL → OG 자동 fetch 공통 훅. 수정 폼은 기존 글 값으로 seed 하고,
+  // URL 이 비어도 OG 를 유지(resetOnEmpty=false)하며 에러 시에도 기존 OG 를 보존.
+  const { og, ogLoading, ogError, titleDirty, onTitleChange, resetTitleFromOg } = useOgFetch({
+    url,
+    title,
+    setTitle,
+    initialOg: {
+      title: post.og_title ?? '',
+      description: post.og_description ?? '',
+      image: post.og_image ?? '',
+      platform: post.source_platform ?? '',
+    },
+    initialLastUrl: post.external_url ?? '',
   });
-  const [ogLoading, setOgLoading] = useState(false);
-  const [ogError, setOgError] = useState<string | null>(null);
-  const ogDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const lastOgUrl = useRef<string>(post.external_url ?? '');
-  // 기존 글 로드 시점에는 사용자가 직접 손 안 댄 상태로 시작.
-  const titleDirty = useRef(false);
 
   // 대표 이미지 관련.
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
   // 사용자가 새 파일을 골랐는지. 골랐다면 "이미지 제거" 체크는 무의미.
   const [hasNewFile, setHasNewFile] = useState(false);
   const [removeCover, setRemoveCover] = useState(false);
-
-  // URL 변경 → 디바운스 → OG fetch.
-  // race condition 방지: AbortController로 이전 진행 중 fetch를 취소해, 느린 응답이
-  // 새 URL의 결과를 덮어쓰는 일을 막는다(엉뚱한 글의 og_image가 저장되는 버그 차단).
-  useEffect(() => {
-    if (ogDebounceRef.current) clearTimeout(ogDebounceRef.current);
-    const trimmed = url.trim();
-    if (!trimmed) {
-      setOgError(null);
-      return;
-    }
-    if (!/^https?:\/\//i.test(trimmed)) return;
-    if (trimmed === lastOgUrl.current) return;
-
-    const ac = new AbortController();
-
-    ogDebounceRef.current = setTimeout(async () => {
-      if (trimmed === lastOgUrl.current) return;
-      lastOgUrl.current = trimmed;
-      setOgLoading(true);
-      setOgError(null);
-      try {
-        const res = await fetch(`/api/og?url=${encodeURIComponent(trimmed)}`, { signal: ac.signal });
-        if (!res.ok) {
-          const err = await res.json().catch(() => ({}));
-          throw new Error(err.error || `HTTP ${res.status}`);
-        }
-        const data = await res.json();
-        // 응답 도착 시점에 URL이 또 바뀌었으면 이 응답은 stale — 무시.
-        if (ac.signal.aborted) return;
-        const next: OgState = {
-          title: data.title ?? '',
-          description: data.description ?? '',
-          image: data.image ?? '',
-          platform: data.platform ?? '',
-        };
-        setOg(next);
-        if (!titleDirty.current && next.title) setTitle(next.title);
-      } catch (e) {
-        if ((e as Error).name === 'AbortError') return;
-        setOgError(e instanceof Error ? e.message : '미리보기 가져오기 실패');
-      } finally {
-        if (!ac.signal.aborted) setOgLoading(false);
-      }
-    }, 600);
-
-    return () => {
-      if (ogDebounceRef.current) clearTimeout(ogDebounceRef.current);
-      ac.abort();
-    };
-  }, [url]);
-
-  function onTitleChange(e: React.ChangeEvent<HTMLInputElement>) {
-    titleDirty.current = true;
-    setTitle(e.target.value);
-  }
-
-  function resetTitleFromOg() {
-    if (!og.title) return;
-    titleDirty.current = false;
-    setTitle(og.title);
-  }
 
   function onCoverChange(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0];
