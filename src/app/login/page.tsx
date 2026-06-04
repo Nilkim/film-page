@@ -15,6 +15,8 @@ import { createClient } from '@/lib/supabase/client';
 import type { Provider } from '@supabase/supabase-js';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import { ArrowLeft } from 'lucide-react';
+import { GoogleIcon, KakaoIcon, NaverIcon } from '@/components/icons';
 
 export default function LoginPage() {
   // /auth/callback 이 OAuth 에러(예: 중복 이메일 차단)를 ?error=<한글메시지> 로 넘겨준다.
@@ -89,41 +91,11 @@ export default function LoginPage() {
         </div>
 
         <div className="mt-6 text-center text-xs text-zinc-500">
-          <Link href="/" className="hover:underline">
-            ← 홈으로 돌아가기
+          <Link href="/" className="hover:underline" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <ArrowLeft size={15} aria-hidden="true" /> 홈으로 돌아가기
           </Link>
         </div>
       </div>
     </div>
-  );
-}
-
-// Google 로고 — 인라인 SVG.
-function GoogleIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
-      <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 01-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z" />
-      <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z" />
-      <path fill="#FBBC05" d="M3.964 10.71A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" />
-      <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z" />
-    </svg>
-  );
-}
-
-// Kakao 말풍선 심볼.
-function KakaoIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 18 18" fill="#191600" aria-hidden="true">
-      <path d="M9 1.5C4.86 1.5 1.5 4.13 1.5 7.38c0 2.1 1.4 3.94 3.5 4.98-.15.53-.56 1.93-.64 2.23-.1.37.14.37.29.27.12-.08 1.86-1.26 2.62-1.78.4.06.81.09 1.23.09 4.14 0 7.5-2.63 7.5-5.88S13.14 1.5 9 1.5z" />
-    </svg>
-  );
-}
-
-// Naver "N" 심볼.
-function NaverIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 20 20" fill="#fff" aria-hidden="true">
-      <path d="M12.3 10.2 7.4 3H3v14h4.7V9.8L12.6 17H17V3h-4.7z" />
-    </svg>
   );
 }
