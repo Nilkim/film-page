@@ -14,7 +14,7 @@
 
 import { createAdminClient } from '@/lib/supabase/admin';
 import { FA_ORDERS_TABLE, NEXT_ORDER_NO_RPC } from '@/lib/db';
-import { normalizePhone, type PgProvider } from '@/lib/portone';
+import { normalizePhone, PG_PROVIDERS, type PgProvider } from '@/lib/portone';
 import type { CartItem } from '@/lib/cart';
 
 export type CreatePendingArgs = {
@@ -52,7 +52,7 @@ function validate(args: CreatePendingArgs): string | null {
     return '이메일을 정확히 입력해 주세요. (이니시스 결제는 이메일 필수)';
   }
   if (!c.addr || c.addr.trim().length < 5) return '주소를 입력해 주세요.';
-  if (!['kakao', 'naver', 'google'].includes(args.pgProvider)) {
+  if (!PG_PROVIDERS.includes(args.pgProvider)) {
     return '결제 수단이 올바르지 않아요.';
   }
   return null;
