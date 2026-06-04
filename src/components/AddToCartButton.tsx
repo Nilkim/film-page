@@ -8,6 +8,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { ShoppingCart, Check } from 'lucide-react';
 import { useCart } from './CartProvider';
 import type { CartItem } from '@/lib/cart';
 
@@ -84,7 +85,7 @@ export default function AddToCartButton({
           className,
         ].filter(Boolean).join(' ')}
       >
-        <CheckIcon /> 카트에서 보기
+        <Check size={14} aria-hidden="true" /> 카트에서 보기
       </Link>
     );
   }
@@ -99,43 +100,7 @@ export default function AddToCartButton({
         className,
       ].filter(Boolean).join(' ')}
     >
-      <CartGlyph /> 장바구니
+      <ShoppingCart size={14} aria-hidden="true" /> 장바구니
     </button>
-  );
-}
-
-function CartGlyph() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.6"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="h-3.5 w-3.5"
-      aria-hidden="true"
-    >
-      <circle cx="9" cy="20" r="1.4" />
-      <circle cx="18" cy="20" r="1.4" />
-      <path d="M3 4h2.4l2.5 11.2a2 2 0 0 0 2 1.6h8.6a2 2 0 0 0 2-1.5L22 8H6.5" />
-    </svg>
-  );
-}
-
-function CheckIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="h-3.5 w-3.5"
-      aria-hidden="true"
-    >
-      <path d="M4 12.5L9 17l11-11" />
-    </svg>
   );
 }
