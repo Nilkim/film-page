@@ -7,6 +7,7 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { ArrowLeft, ArrowRight } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { ORDER_LOOKUP_RPC } from '@/lib/db';
 import { normalizePhone } from '@/lib/portone';
@@ -125,9 +126,11 @@ export default function CompleteView() {
       </div>
 
       <div className="mt-6 flex items-center justify-between text-sm">
-        <Link href="/" className="text-ink hover:underline">← 홈으로</Link>
-        <Link href={`/orders/lookup?phone=${encodeURIComponent(phone)}&orderNo=${encodeURIComponent(orderNo)}`} className="text-ink hover:underline">
-          주문조회 →
+        <Link href="/" className="text-ink hover:underline" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+          <ArrowLeft size={15} aria-hidden="true" /> 홈으로
+        </Link>
+        <Link href={`/orders/lookup?phone=${encodeURIComponent(phone)}&orderNo=${encodeURIComponent(orderNo)}`} className="text-ink hover:underline" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+          주문조회 <ArrowRight size={15} aria-hidden="true" />
         </Link>
       </div>
     </main>
