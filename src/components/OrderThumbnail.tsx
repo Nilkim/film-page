@@ -1,4 +1,5 @@
 // 주문 도면 SVG 썸네일 — film-cutting의 OrderThumbnail.jsx를 TS로 이식.
+// SYNC: 위 JS 원본과 1:1 대응. 한쪽 렌더 로직을 바꾸면 반대쪽도 함께 수정할 것.
 //
 // 7가지 shape 타입(parametric/path/rect/circle/triangle/star/bubble)을 SVG
 // primitive로 매핑. Konva의 적용 순서(translate → rotate → scale)와 origin
