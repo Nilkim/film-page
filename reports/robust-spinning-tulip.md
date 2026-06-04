@@ -150,3 +150,35 @@
 - **공유 패키지 퍼블리시 메커니즘**: ① 공개 npm ② 비공개 scoped npm ③ git submodule(별도 공유 레포). 퍼블리시는 외부 공개 행위라 진행 전 확인.
 - FilmCutting 루트 테스트 DXF(`aa.dxf`/`FF.dxf`): 픽스처로 보존 vs 삭제.
 - `design_handoff_filmartwork/`: 참조 보존 vs 삭제.
+
+---
+
+## 실행 결과 (이번 세션)
+
+| Phase | 상태 | 검증 |
+|---|---|---|
+| 0 P0 결제 버그 | ✅ 완료 (`PG_PROVIDERS` 단일 원천) | `tsc` |
+| 1 레포 위생 | ✅ 완료 (백업폴더·미사용dep·잡파일·gitignore) | `build` |
+| 2 내부 중복 | ✅ 완료 (providerLabelShort/buildOrderName/emailTableRows/useOgFetch · CompositionSafeInput/useSupabaseList) | `build`+`tsc` |
+| 3 아이콘 통일 | ✅ 완료 (양쪽 lucide-react, 브랜드 아이콘 `components/icons.tsx` 중앙화, 유니코드 글리프 전량 교체) | `build`+`tsc` |
+| 5 로직/정확성 | ✅ 완료 (패키지명 AbortController, trackUrl 지연, shapeBake NaN 가드, clampFillet 경고) | `build`+`tsc` |
+| 6 DXF 분해 | ✅ 완료 (importDXFtoShapes → 6개 헬퍼, 동작 불변) | `build` |
+| 2 KIND_LABELS 통합 | ⏭️ 의도적 SKIP — registry와 실제로 다름(bubble tailDir↔tailAngle, text fontId, arch kind). 강제 시 도형 기본값 변형 위험 |  |
+| 4 공유 패키지 | ⛔ 보류 — 아래 핸드오프 필요 |  |
+| 6 대형 UI 리팩터 | ⛔ 보류 — 앱 실행 검증 필요 |  |
+
+총 ~41개 **파일별 커밋**(film-page + FilmCutting). 사용자 작업 파일(`OrderCompletePage.jsx`, `reports/iridescent-yawning-noodle.md`)은 미변경.
+
+### Phase 4 핸드오프 (사용자 GitHub 작업 선행)
+`gh`/인증 부재로 새 원격 레포 생성은 사용자만 가능. 순서:
+1. GitHub에 `Nilkim/film-artwork-geo`(private) 생성.
+2. 공유 패키지 작성: `src/shapeBounds.ts`(film-page의 paper-core 패턴 = SSR 안전 표준) + `OrderThumbnail.tsx`, `tsconfig`로 JS+`.d.ts` 빌드, `package.json`(deps: `paper`; peer: `react`).
+3. 양쪽 레포에 `git submodule add https://github.com/Nilkim/film-artwork-geo` + `netlify.toml`에 submodule fetch 확인.
+4. 두 프로젝트의 `shapeBounds`/`OrderThumbnail` import를 패키지로 교체, 중복 파일 제거.
+> 레포가 생기면 2~4단계는 자동 실행 가능. (현 상태: 양쪽에 중복 유지 — TS측 파일에 이미 "JS에서 이식" 주석 있어 drift는 추적됨.)
+
+### 남은 Phase 6 (앱 실행 검증 권장)
+- `OrderPage.jsx` 940줄 상태 분해(useOrderForm/useLookupModal) — 캔버스/주문 흐름 회귀 위험, `npm run dev`로 확인하며 진행.
+- admin 3페이지 CRUD 공유화(`useAdminCRUD`/`<AdminListPage>`) — ~800 LOC 절감, 테이블/모달 회귀 확인 필요.
+- `alert()` → 토스트(react-hot-toast) 일괄 교체 — UX 개선, 시각 확인 권장.
+- `mail.ts` send 결과 `{ok,error}` 반환 — 무음 skip 가시화(저위험, 선택).
