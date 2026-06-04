@@ -167,7 +167,13 @@
 | 4 공유 패키지 | ⛔ 보류 — 아래 핸드오프 필요 |  |
 | 6 대형 UI 리팩터 | ⛔ 보류 — 앱 실행 검증 필요 |  |
 
-총 ~41개 **파일별 커밋**(film-page + FilmCutting). 사용자 작업 파일(`OrderCompletePage.jsx`, `reports/iridescent-yawning-noodle.md`)은 미변경.
+총 ~58개 **파일별 커밋**(film-page 30 + FilmCutting 28). 사용자 작업 파일(`OrderCompletePage.jsx`, `reports/iridescent-yawning-noodle.md`)은 미변경 + 복구 스냅샷 태그 `wip-safety-20260604` 양쪽 생성.
+
+추가 완료: OrderPage 순수 헬퍼 분리(A-1: useIsMobile/orderFormat/Stepper), admin storagePathFromPublicUrl 공유 유틸(B-1).
+
+### 검증 완료 (2026-06-05, 실제 앱 구동)
+- **FilmCutting(5173)**: 사용자 직접(도면 저장·관리자 확인) + 에이전트(Stepper/Check 아이콘·캔버스·필름 로딩=useSupabaseList) → 정상
+- **film-page(3001)**: 홈/헤더 아이콘·장바구니 담기(Check)·체크아웃·결제수단 4종 PgIcon → 정상. **신용카드 P0 수정 확인**(옵션 렌더·선택 가능, 검증 통과). 라이브 결제는 PG 승인 대기로 보류(코드 무관).
 
 ### Phase 4 핸드오프 (사용자 GitHub 작업 선행)
 `gh`/인증 부재로 새 원격 레포 생성은 사용자만 가능. 순서:
