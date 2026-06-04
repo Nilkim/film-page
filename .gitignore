@@ -24,6 +24,9 @@
 .DS_Store
 *.pem
 
+# temp dev screenshots (e.g. .tmp-live.png, diagnostic captures)
+*.tmp*.png
+
 # debug
 npm-debug.log*
 yarn-debug.log*
