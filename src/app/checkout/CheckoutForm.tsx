@@ -16,6 +16,7 @@ import { useCart } from '@/components/CartProvider';
 import PriceTag from '@/components/PriceTag';
 import { createPendingOrder } from './actions';
 import { getClientConfig, providerLabel, payPayload, PG_PROVIDERS, type PgProvider } from '@/lib/portone';
+import { buildOrderName } from '@/lib/orders';
 import { PgIcon } from '@/components/icons';
 
 // PG 결제창의 customer.email 필수 요건(KG이니시스 V2 등)을 위해 회사 이메일을 자동 사용.
@@ -39,11 +40,7 @@ export default function CheckoutForm() {
   const discount = Math.max(0, originalTotal - subtotal);
   const total = subtotal;
   const hasDiscount = discount > 0;
-  const orderName = cart.length === 0
-    ? ''
-    : cart.length === 1
-      ? cart[0].title
-      : `${cart[0].title} 외 ${cart.length - 1}건`;
+  const orderName = buildOrderName(cart);
 
   if (!ready) {
     return <div className="mt-8 text-sm text-ink-60">카트를 불러오는 중…</div>;
