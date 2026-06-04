@@ -243,3 +243,114 @@ type CartItem =
 > Phase 1(관리자/가격) → Phase 2(카트) → Phase 4(결제) → Phase 3(FilmCutting 연결) → Phase 5(주문조회)
 
 이유: 가격 표시가 먼저 정확해야 카트가 의미 있음. FilmCutting 연결은 film-page 카트가 작동하고 나서 진입점 추가만 하면 되므로 뒤로. 결제는 카트 다음 자연스러운 순서.
+
+---
+
+## ADR-001: 결제 인프라 = 포트원 V2 유지 (직결 X)
+
+**결정일**: 2026-06-04
+**결정**: 결제 인프라는 **포트원(PortOne) V2** 어그리게이터를 그대로 유지한다. KG이니시스 직결합으로 전환하지 않는다.
+
+### Context
+
+운영 중 "KG이니시스 한 PG 만 쓸 거면 포트원 한 단계 빼고 직결하는 게 단순하지 않냐" 는 의문이 제기됨. 현재 통합 상태:
+- `@portone/browser-sdk` + `@portone/server-sdk` 설치 완료
+- KG이니시스 V2 채널 1개(channel-key-66db42eb-...) 활성
+- `CheckoutForm.requestPayment` / `webhook/route.ts` / 환불·조회 모두 PortOne SDK 의존
+
+### Decision
+
+포트원 V2 유지. 직결 검토 시점은 **아래 트리거 조건이 발생할 때만**.
+
+### Consequence — 이점 5가지
+
+1. **인터페이스 통일** — `PortOne.requestPayment` / `Webhook.verify` / `payment.getPayment` 3개 API 가 모든 PG 에 동일. 카카오·네이버·토스·스마트페이 등 추가 시 코드 0줄 변경(채널키만 갈아끼움).
+2. **카카오·네이버페이 신청 대기 중** — [V104] 에러로 미활성. 풀리는 시점에 즉시 추가 가능해 포트원 가치 ↑.
+3. **추가 수수료 0원** — 포트원 자체는 가맹점 무료 (PG 수수료에서 포트원 측 정산).
+4. **콘솔 통합** — 모든 거래·환불·webhook 로그가 포트원 콘솔 한 화면에 누적.
+5. **매몰비용** — 통합·검증·배포 완료 상태. 직결 전환은 약 2~3일 풀 리팩토링.
+
+### 트레이드오프
+
+- **외부 의존성 +1** — 포트원 다운 시 결제 영향 (드물지만 가능).
+- **약간의 학습 비용** — V1/V2 가 다르고 SDK 변화 가능성.
+
+### 직결 전환 트리거 (이때 재검토)
+
+다음 중 하나가 명백해지면 ADR 갱신·전환 검토:
+- 포트원 정책 변경으로 수수료·제약 발생
+- KG이니시스 한 PG 만으로 1년 이상 운영이 확정 + 다른 PG 추가 의도 없음
+- 포트원 다운/장애로 결제 손실 누적 (운영 데이터로 입증)
+- 포트원 SDK breaking change 로 재통합 비용 발생
+
+### 영향 없는 후속 작업 — 그대로 진행 가능
+
+- KG이니시스 가맹점 측 카카오·네이버페이 추가 신청(별건)
+- Resend 도메인 인증(별건, 메일 인프라)
+- pending 24h+ 자동 만료(별건, 운영 정합성)
+
+ADR 의 핵심은 **"결정의 이유" 가 1년 뒤에도 명확히 읽힌다** 는 것. 트리거 조건이 발생하지 않으면 재검토하지 않는다.
+
+---
+
+## ADR-002: 호스팅 = Netlify 유지 + cold start 완화 우선
+
+**결정일**: 2026-06-04
+**결정**: 호스팅은 **Netlify 그대로 유지**. Cloudflare Pages / Firebase Hosting 마이그레이션 보류. 한국 사용자 "느림" 증상은 **ISR cache 정책 + prerender 강화** 로 해결.
+
+### 진단 결과
+
+`curl -o /dev/null -s -w "..." https://film-artwork.com/` 5회 측정:
+
+| 요청 | DNS | Connect | SSL | TTFB | Total |
+|---|---|---|---|---|---|
+| 1st (cold) | 0.14s | 0.15s | 0.53s | **3.42s** 🚨 | 3.49s |
+| 2nd (warm) | — | — | — | 0.50s | 0.56s |
+| 3rd (warm) | — | — | — | 0.49s | 0.56s |
+| /cart (dynamic) | — | — | — | 0.79s | 0.86s |
+| /orders/lookup (dynamic) | — | — | — | 0.74s | 0.80s |
+
+**결론**:
+- DNS/Connect/SSL = 정상 (한국 → 도쿄 PoP 까지의 latency 가 80~150ms 로 양호)
+- cold start TTFB **3.42s** vs warm **0.50s** = **7배 차이**
+- "느림" 의 정체 = **첫 방문자(cache miss)** 의 ISR re-generation 시간
+
+### Why NOT 마이그레이션
+
+| 옵션 | 한국 PoP latency | Cold start | 우리 호환성 | 마이그레이션 비용 |
+|---|---|---|---|---|
+| Netlify (현재) | 80~120ms (도쿄) | 1~3초 (Lambda) | 완벽 | 0 |
+| Cloudflare Pages | 20~40ms (서울) | ~10ms (Workers V8 isolate) | **위험** — `@portone/server-sdk`, `resend`, `@supabase/ssr` 등 Node-only API 검증 필요 | 2~5일 |
+| Firebase Hosting | 80~120ms (도쿄) | 1~3초 (Cloud Run) | 완벽 | 1~3일 |
+
+- **Cloudflare** 의 큰 이점은 cold start ~10ms 인데, 우리 SDK 3개가 V8 isolate 에서 폭발할 가능성 있어 검증 비용 큼.
+- **Firebase** 는 Netlify 대비 차이 거의 없음.
+- **마이그레이션보다 ISR 캐시 조정이 효과 같음 + 비용 1/10**.
+
+### Recommended Actions (3 phase)
+
+**Phase A — 즉시 (코드 1~2줄)**
+1. `src/app/page.tsx` 의 `export const revalidate = 60` → **600** (10분) 또는 **3600** (1시간) 로 변경. 게시물이 잦게 변하지 않으므로 안전. cache hit 율 ↑ → cold start 빈도 ↓.
+2. `src/app/posts/[id]/page.tsx` 도 동일하게 600~3600 으로.
+
+**Phase B — 단기 (반나절)**
+3. `src/app/posts/[id]/page.tsx` 에 `generateStaticParams` 추가 — 최근 60개 게시물의 ID 를 빌드 시점에 prerender. 첫 방문자도 정적 자산 즉시 응답 (~50ms).
+4. 새 글 작성 시 `revalidatePath` 호출 위치 점검 — actions 에서 정확히 갱신되는지.
+
+**Phase C — 검증·관찰**
+5. Netlify Analytics 또는 Vercel Speed Insights 로 P75/P95 TTFB 측정 (cold start 빈도 실제 데이터).
+6. 1주일 운영 후 재측정 — cold start 가 여전히 잦으면 Cloudflare 검토 트리거.
+
+### Supabase region 확인 (별건 — 부수 영향)
+
+위 측정에서 dynamic route TTFB 0.79s 중 일부가 Supabase 호출 시간. Supabase 콘솔 → Project Settings → General → **Region** 확인:
+- `Northeast Asia (Tokyo)` 또는 `Northeast Asia (Seoul)` 이면 양호
+- `Southeast Asia (Singapore)` / `US` 면 → DB 호출당 100~200ms 추가, 별도 마이그레이션 검토(데이터 이전 작업 큼)
+
+### 트리거 — Cloudflare 재검토 시점
+
+다음 중 하나라도:
+- Phase A+B 적용 후에도 P75 TTFB > 2초
+- 모바일 사용자 비율 ↑ + cold start 불만 누적
+- Netlify Function 사용량 한도 초과(매월 125k req)
+- SDK 호환성 우려 사라짐(테스트 환경에서 PortOne/Resend/Supabase 모두 통과 확인)
