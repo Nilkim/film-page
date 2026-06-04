@@ -7,7 +7,7 @@
 //
 // 환경변수는 .env.local 에 자리 마련됨(P0 단계). 채널 키는 콘솔 가입 후 채워야 동작.
 
-export type PgProvider = 'kakao' | 'naver' | 'google';
+export type PgProvider = 'card' | 'kakao' | 'naver' | 'google';
 
 // 브라우저에서 사용할 client config — NEXT_PUBLIC_ env 만 사용.
 export type PortOneClientConfig = {
@@ -22,7 +22,13 @@ export function getClientConfig(provider: PgProvider): PortOneClientConfig {
 }
 
 function pickChannelKey(provider: PgProvider): string {
+  // 모든 결제수단이 동일한 KG이니시스 V2 채널을 사용 — payMethod 만 다르게 보냄.
+  // 채널키 4개 자리에 같은 값을 두는 게 권장이지만, 안전을 위해 fallback 체인으로 1개라도 있으면 사용.
   switch (provider) {
+    case 'card':   return process.env.NEXT_PUBLIC_PORTONE_CHANNEL_KEY_KAKAO
+                     ?? process.env.NEXT_PUBLIC_PORTONE_CHANNEL_KEY_NAVER
+                     ?? process.env.NEXT_PUBLIC_PORTONE_CHANNEL_KEY_GOOGLE
+                     ?? '';
     case 'kakao':  return process.env.NEXT_PUBLIC_PORTONE_CHANNEL_KEY_KAKAO ?? '';
     case 'naver':  return process.env.NEXT_PUBLIC_PORTONE_CHANNEL_KEY_NAVER ?? '';
     case 'google': return process.env.NEXT_PUBLIC_PORTONE_CHANNEL_KEY_GOOGLE ?? '';
@@ -32,6 +38,7 @@ function pickChannelKey(provider: PgProvider): string {
 // 결제 라벨 — provider 별 표기.
 export function providerLabel(p: PgProvider): string {
   switch (p) {
+    case 'card':   return '신용카드';
     case 'kakao':  return '카카오페이';
     case 'naver':  return '네이버페이';
     case 'google': return '구글페이';
@@ -46,6 +53,8 @@ export function providerLabel(p: PgProvider): string {
 // PortOne SDK 는 string literal union 으로 좁힌 타입을 요구 — as const 로 literal 유지.
 export function payPayload(p: PgProvider) {
   switch (p) {
+    case 'card':
+      return { payMethod: 'CARD' } as const;
     case 'kakao':
       return {
         payMethod: 'EASY_PAY',
