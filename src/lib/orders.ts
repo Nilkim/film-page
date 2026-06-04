@@ -51,6 +51,16 @@ export async function findOrdersByPhone(
   }));
 }
 
+// 주문명 — 결제창 orderName / 알림 메일 상품 표기에 공통으로 쓰이는 문자열.
+// 빈 목록은 '' (메일 측은 falsy 라 상품 행 자체를 렌더하지 않음).
+//   1건  → title
+//   N건  → `{title} 외 {N-1}건`
+export function buildOrderName(items: Array<{ title: string; qty?: number }>): string {
+  if (items.length === 0) return '';
+  if (items.length === 1) return items[0].title;
+  return `${items[0].title} 외 ${items.length - 1}건`;
+}
+
 // 사용자 식별자 도출.
 //   - 이메일 있으면 @ 앞부분 → 영문숫자/하이픈만 남기고 소문자화
 //   - 너무 짧거나 이메일 없으면 user.id 앞 8자
