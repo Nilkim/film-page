@@ -10,7 +10,7 @@ import Link from 'next/link';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { ORDER_LOOKUP_RPC } from '@/lib/db';
-import { normalizePhone } from '@/lib/portone';
+import { normalizePhone, providerLabelShort } from '@/lib/portone';
 
 type OrderRow = {
   order_no: string;
@@ -156,16 +156,5 @@ function statusLabel(s: OrderRow['pg_status'] | null): string {
     case 'cancelled': return '결제 취소';
     case 'refunded':  return '환불 완료';
     default:          return '—';
-  }
-}
-
-function providerLabelShort(p: string): string {
-  switch (p) {
-    case 'kakao':  return '카카오페이';
-    case 'naver':  return '네이버페이';
-    case 'google': return '구글페이';
-    case 'card':   return '신용카드';
-    case 'test':   return '테스트';
-    default:       return p;
   }
 }
