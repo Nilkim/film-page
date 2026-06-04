@@ -50,6 +50,20 @@ export function providerLabel(p: PgProvider): string {
   }
 }
 
+// 결제 라벨(짧은 표기) — 주문조회·결제완료 화면에서 DB의 pg_provider(string) 를 받아 표기.
+// providerLabel 과 달리 DB 값에는 과거 'test' 가 섞여 있을 수 있어 string 을 받고
+// 알 수 없는 값은 원문 그대로 반환한다.
+export function providerLabelShort(p: string): string {
+  switch (p) {
+    case 'kakao':  return '카카오페이';
+    case 'naver':  return '네이버페이';
+    case 'google': return '구글페이';
+    case 'card':   return '신용카드';
+    case 'test':   return '테스트';
+    default:       return p;
+  }
+}
+
 // PortOne V2 결제수단 페이로드 — KG이니시스 V2 기준.
 //   - 카카오·네이버: EASY_PAY + easyPay.easyPayProvider
 //   - 구글페이: 이니시스 V2 의 EASY_PAY 범주에 없음 → CARD 로 fallback
