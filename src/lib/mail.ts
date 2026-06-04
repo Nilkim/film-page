@@ -68,6 +68,19 @@ async function send(opts: { to: string; subject: string; html: string }): Promis
   }
 }
 
+// 메일 본문 정보 테이블의 <tr> 묶음 생성 — 결제완료/발송완료 메일이 공유.
+// 첫 행만 border-top 을 빼고, 둘째 행부터 구분선을 넣는다(기존 마크업과 동일).
+// value 에 monospace/bold 등 행별 스타일이 필요하면 호출 측이 <span style> 로 감싼다.
+function emailTableRows(rows: Array<{ label: string; value: string }>): string {
+  return rows
+    .map(({ label, value }, i) => {
+      const top = i === 0 ? '' : 'border-top:1px solid #e8e3d8;';
+      return `<tr><td style="padding:10px 14px;color:#9a8f7a;font-size:12px;${top}">${label}</td>
+          <td style="padding:10px 14px;${top}color:#1b1610;">${value}</td></tr>`;
+    })
+    .join('\n      ');
+}
+
 // 공통 레이아웃 wrapping — 외부 메일 클라이언트 호환성을 위해 inline-style 위주.
 function shell(title: string, body: string): string {
   return `<!doctype html>
@@ -98,15 +111,15 @@ export async function sendPaymentConfirmation(args: {
   orderName?: string;
 }): Promise<void> {
   const lookup = `${SITE_URL}/orders/lookup?orderNo=${encodeURIComponent(args.orderNo)}`;
+  const rows = [
+    { label: '주문번호', value: `<span style="font-family:'SFMono-Regular',Menlo,monospace;font-weight:bold;">${args.orderNo}</span>` },
+    ...(args.orderName ? [{ label: '상품', value: escapeHtml(args.orderName) }] : []),
+    { label: '총 결제금액', value: `<span style="font-weight:bold;">${args.total.toLocaleString('ko-KR')}원</span>` },
+  ];
   const body = `
     <p>${args.customerName} 님, 결제가 완료되었습니다. 감사합니다.</p>
     <table cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:16px 0;border:1px solid #e8e3d8;border-radius:4px;">
-      <tr><td style="padding:10px 14px;color:#9a8f7a;font-size:12px;">주문번호</td>
-          <td style="padding:10px 14px;font-family:'SFMono-Regular',Menlo,monospace;font-weight:bold;color:#1b1610;">${args.orderNo}</td></tr>
-      ${args.orderName ? `<tr><td style="padding:10px 14px;color:#9a8f7a;font-size:12px;border-top:1px solid #e8e3d8;">상품</td>
-          <td style="padding:10px 14px;border-top:1px solid #e8e3d8;color:#1b1610;">${escapeHtml(args.orderName)}</td></tr>` : ''}
-      <tr><td style="padding:10px 14px;color:#9a8f7a;font-size:12px;border-top:1px solid #e8e3d8;">총 결제금액</td>
-          <td style="padding:10px 14px;border-top:1px solid #e8e3d8;font-weight:bold;color:#1b1610;">${args.total.toLocaleString('ko-KR')}원</td></tr>
+      ${emailTableRows(rows)}
     </table>
     <p>주문 진행 상황은 아래 링크에서 확인하실 수 있습니다.</p>
     <p style="margin:18px 0;">
@@ -132,15 +145,15 @@ export async function sendShippingNotification(args: {
   const carrierLabel = args.carrier ? (CARRIER_LABELS[args.carrier] ?? args.carrier) : '택배사 미지정';
   const trackUrl = trackingUrl(args.carrier, args.trackingNumber);
   const lookup = `${SITE_URL}/orders/lookup?orderNo=${encodeURIComponent(args.orderNo)}`;
+  const rows = [
+    { label: '주문번호', value: `<span style="font-family:'SFMono-Regular',Menlo,monospace;font-weight:bold;">${args.orderNo}</span>` },
+    { label: '택배사', value: escapeHtml(carrierLabel) },
+    { label: '운송장 번호', value: `<span style="font-family:'SFMono-Regular',Menlo,monospace;">${escapeHtml(args.trackingNumber ?? '미지정')}</span>` },
+  ];
   const body = `
     <p>${args.customerName} 님, 주문하신 상품이 발송되었습니다.</p>
     <table cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:16px 0;border:1px solid #e8e3d8;border-radius:4px;">
-      <tr><td style="padding:10px 14px;color:#9a8f7a;font-size:12px;">주문번호</td>
-          <td style="padding:10px 14px;font-family:'SFMono-Regular',Menlo,monospace;font-weight:bold;color:#1b1610;">${args.orderNo}</td></tr>
-      <tr><td style="padding:10px 14px;color:#9a8f7a;font-size:12px;border-top:1px solid #e8e3d8;">택배사</td>
-          <td style="padding:10px 14px;border-top:1px solid #e8e3d8;color:#1b1610;">${escapeHtml(carrierLabel)}</td></tr>
-      <tr><td style="padding:10px 14px;color:#9a8f7a;font-size:12px;border-top:1px solid #e8e3d8;">운송장 번호</td>
-          <td style="padding:10px 14px;border-top:1px solid #e8e3d8;font-family:'SFMono-Regular',Menlo,monospace;color:#1b1610;">${escapeHtml(args.trackingNumber ?? '미지정')}</td></tr>
+      ${emailTableRows(rows)}
     </table>
     ${trackUrl ? `<p style="margin:18px 0;">
       <a href="${trackUrl}" style="display:inline-block;background:#1b1610;color:#ffffff;text-decoration:none;padding:10px 18px;border-radius:999px;font-size:13px;">택배 추적</a>
