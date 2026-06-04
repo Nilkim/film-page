@@ -9,6 +9,11 @@
 
 export type PgProvider = 'card' | 'kakao' | 'naver' | 'google';
 
+// 지원 결제수단 단일 원천 — UI 라디오·서버 검증·payPayload 가 모두 이 목록을 공유한다.
+// (과거 'card' 추가 시 UI/SDK 만 반영되고 서버 validate 가 누락돼 신용카드 결제가
+//  막히는 드리프트가 있었음. 목록을 한 곳에 두어 재발 방지.)
+export const PG_PROVIDERS: readonly PgProvider[] = ['card', 'kakao', 'naver', 'google'];
+
 // 브라우저에서 사용할 client config — NEXT_PUBLIC_ env 만 사용.
 export type PortOneClientConfig = {
   storeId: string;
