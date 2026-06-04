@@ -10,7 +10,7 @@ import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { ORDER_LOOKUP_RPC, type FulfillmentStatus } from '@/lib/db';
-import { normalizePhone } from '@/lib/portone';
+import { normalizePhone, providerLabelShort } from '@/lib/portone';
 import { CARRIER_LABELS, trackingUrl } from '@/lib/mail';
 import PriceTag from '@/components/PriceTag';
 import type { CartItem } from '@/lib/cart';
@@ -316,17 +316,6 @@ function Row({ label, value }: { label: string; value: string }) {
       <span className="tabular-nums text-ink-70">{value}</span>
     </div>
   );
-}
-
-function providerLabelShort(p: string): string {
-  switch (p) {
-    case 'kakao':  return '카카오페이';
-    case 'naver':  return '네이버페이';
-    case 'google': return '구글페이';
-    case 'card':   return '신용카드';
-    case 'test':   return '테스트';
-    default:       return p;
-  }
 }
 
 const inputCls =
