@@ -15,9 +15,7 @@ import Link from 'next/link';
 import { useCart } from '@/components/CartProvider';
 import PriceTag from '@/components/PriceTag';
 import { createPendingOrder } from './actions';
-import { getClientConfig, providerLabel, payPayload, type PgProvider } from '@/lib/portone';
-
-const PROVIDERS: PgProvider[] = ['card', 'kakao', 'naver', 'google'];
+import { getClientConfig, providerLabel, payPayload, PG_PROVIDERS, type PgProvider } from '@/lib/portone';
 
 // PG 결제창의 customer.email 필수 요건(KG이니시스 V2 등)을 위해 회사 이메일을 자동 사용.
 // 영수증·결제확인은 코틸레돈에서 받아 별도 채널로 고객 응대.
@@ -224,7 +222,7 @@ export default function CheckoutForm() {
         <section className="rounded-[6px] border border-card-line bg-card p-4">
           <h2 className="text-sm font-semibold text-ink">결제 수단</h2>
           <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
-            {PROVIDERS.map((p) => (
+            {PG_PROVIDERS.map((p) => (
               <label
                 key={p}
                 className={
