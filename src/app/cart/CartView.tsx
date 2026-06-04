@@ -129,9 +129,12 @@ export default function CartView() {
                 onClick={() => {
                   if (confirm('카트를 비울까요?')) clear();
                 }}
-                className="text-xs text-ink-60 hover:text-ink hover:underline"
+                aria-label="카트 비우기"
+                title="카트 비우기"
+                className="inline-flex h-8 items-center gap-1 rounded px-2 text-xs text-ink-60 transition-colors hover:bg-ink-06 hover:text-ink"
               >
-                카트 비우기
+                <TrashIcon />
+                <span className="hidden sm:inline">비우기</span>
               </button>
               <Link
                 href="/checkout"
@@ -179,16 +182,17 @@ function CartRow({
       </div>
 
       <div className="min-w-0 flex-1">
-        <div className="flex items-baseline gap-2">
-          <span className="rounded bg-ink-06 px-1.5 py-0.5 font-mono text-[10px] tracking-tight text-ink-70">
-            {isPkg ? '패키지' : 'FilmCutting'}
+        <div className="flex min-w-0 items-center gap-2">
+          {/* 라벨 — 항상 가로 한 줄로 강제(shrink-0 + nowrap), 카드별로 세로/가로 들쭉 방지 */}
+          <span className="flex-none whitespace-nowrap rounded bg-ink-06 px-1.5 py-0.5 font-mono text-[10px] tracking-tight text-ink-70">
+            {isPkg ? '패키지' : '도면'}
           </span>
           {isPkg ? (
-            <Link href={`/posts/${item.post_id}`} className="line-clamp-1 text-sm font-medium text-ink hover:underline">
+            <Link href={`/posts/${item.post_id}`} className="line-clamp-1 min-w-0 text-sm font-medium text-ink hover:underline">
               {item.title}
             </Link>
           ) : (
-            <span className="line-clamp-1 text-sm font-medium text-ink">{item.title}</span>
+            <span className="line-clamp-1 min-w-0 text-sm font-medium text-ink">{item.title}</span>
           )}
         </div>
         <PriceTag
@@ -228,12 +232,36 @@ function CartRow({
         <button
           type="button"
           onClick={onRemove}
-          className="text-xs text-ink-45 hover:text-ink hover:underline"
+          aria-label="항목 삭제"
+          className="inline-flex h-7 w-7 items-center justify-center rounded text-ink-45 transition-colors hover:bg-ink-06 hover:text-ink"
         >
-          삭제
+          <TrashIcon />
         </button>
       </div>
     </li>
+  );
+}
+
+// 휴지통 픽토그램 — 삭제/비우기 양쪽에서 공통 사용.
+function TrashIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width="16"
+      height="16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <polyline points="3 6 5 6 21 6" />
+      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+      <path d="M10 11v6" />
+      <path d="M14 11v6" />
+      <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+    </svg>
   );
 }
 
