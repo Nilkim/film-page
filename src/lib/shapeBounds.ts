@@ -1,4 +1,5 @@
 // 도형 외곽 박스 계산 — film-cutting의 src/utils/shapeBounds.js를 TS로 이식.
+// SYNC: 위 JS 원본과 1:1 대응. 한쪽 로직을 바꾸면 반대쪽도 함께 수정할 것.
 //
 // paper-core를 명시 import하는 이유: paper 패키지의 자동 entry는 Node 환경에서
 // `dist/node/canvas.js`를 가져오는데, 이게 jsdom을 require해서 Next.js 빌드가
