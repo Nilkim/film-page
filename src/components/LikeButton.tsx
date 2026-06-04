@@ -7,6 +7,7 @@
 
 import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
+import { Heart } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { TABLE } from '@/lib/db';
 import { toggleLike } from '@/app/posts/[id]/interactions-actions';
@@ -81,26 +82,8 @@ export default function LikeButton({
           : 'border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-300 dark:hover:bg-zinc-900'
       }`}
     >
-      <HeartIcon filled={liked} />
+      <Heart size={16} fill={liked ? 'currentColor' : 'none'} aria-hidden="true" />
       <span className="tabular-nums">{count}</span>
     </button>
-  );
-}
-
-function HeartIcon({ filled }: { filled: boolean }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill={filled ? 'currentColor' : 'none'}
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="h-4 w-4"
-      aria-hidden="true"
-    >
-      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-    </svg>
   );
 }
