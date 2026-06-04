@@ -13,6 +13,7 @@ import * as PortOne from '@portone/server-sdk';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { FA_ORDERS_TABLE } from '@/lib/db';
 import { sendPaymentConfirmation } from '@/lib/mail';
+import { buildOrderName } from '@/lib/orders';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -127,11 +128,7 @@ export async function POST(req: NextRequest) {
   // mail 헬퍼는 RESEND_API_KEY 없으면 skip 하므로 키 미설정 환경에서도 안전.
   if (next === 'paid' && existing.customer_notify_email) {
     const items = (existing.items as Array<{ title: string; qty: number }> | null) ?? [];
-    const orderName = items.length === 0
-      ? undefined
-      : items.length === 1
-        ? items[0].title
-        : `${items[0].title} 외 ${items.length - 1}건`;
+    const orderName = buildOrderName(items);
     // fire-and-forget — webhook 응답 지연 방지. 실패해도 결제 상태는 paid 로 유지.
     sendPaymentConfirmation({
       to: existing.customer_notify_email,
