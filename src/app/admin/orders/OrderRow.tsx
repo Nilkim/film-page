@@ -38,7 +38,6 @@ export default function OrderRow({ order }: { order: FaOrder }) {
 
   const isPaid = order.pg_status === 'paid';
   const f = order.fulfillment_status;
-  const trackUrl = trackingUrl(order.tracking_carrier, order.tracking_number);
 
   return (
     <li className="px-4 py-3">
@@ -76,7 +75,10 @@ export default function OrderRow({ order }: { order: FaOrder }) {
         </svg>
       </button>
 
-      {open && (
+      {open && (() => {
+        // 운송장 추적 URL — 펼쳐진 행에서만 계산(접힌 행은 불필요).
+        const trackUrl = trackingUrl(order.tracking_carrier, order.tracking_number);
+        return (
         <div className="mt-4 grid grid-cols-1 gap-4 border-t border-card-line pt-4 lg:grid-cols-[1fr_320px]">
           {/* 좌측: 항목 + 주소 + 메모 */}
           <div className="space-y-3 text-sm">
@@ -209,7 +211,8 @@ export default function OrderRow({ order }: { order: FaOrder }) {
             )}
           </div>
         </div>
-      )}
+        );
+      })()}
     </li>
   );
 }
