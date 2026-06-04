@@ -11,6 +11,7 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { Trash2, ArrowRight, ArrowLeft } from 'lucide-react';
 import { useCart, cartItemKey } from '@/components/CartProvider';
 import PriceTag from '@/components/PriceTag';
 import { createClient } from '@/lib/supabase/client';
@@ -133,14 +134,15 @@ export default function CartView() {
                 title="카트 비우기"
                 className="inline-flex h-8 items-center gap-1 rounded px-2 text-xs text-ink-60 transition-colors hover:bg-ink-06 hover:text-ink"
               >
-                <TrashIcon />
+                <Trash2 size={16} aria-hidden="true" />
                 <span className="hidden sm:inline">비우기</span>
               </button>
               <Link
                 href="/checkout"
                 className="rounded-full bg-ink px-5 py-2 text-sm font-semibold text-bg transition-opacity hover:opacity-90"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
               >
-                결제하기 →
+                결제하기 <ArrowRight size={15} aria-hidden="true" />
               </Link>
             </div>
           </div>
@@ -235,33 +237,10 @@ function CartRow({
           aria-label="항목 삭제"
           className="inline-flex h-7 w-7 items-center justify-center rounded text-ink-45 transition-colors hover:bg-ink-06 hover:text-ink"
         >
-          <TrashIcon />
+          <Trash2 size={16} aria-hidden="true" />
         </button>
       </div>
     </li>
-  );
-}
-
-// 휴지통 픽토그램 — 삭제/비우기 양쪽에서 공통 사용.
-function TrashIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      width="16"
-      height="16"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.6"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <polyline points="3 6 5 6 21 6" />
-      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
-      <path d="M10 11v6" />
-      <path d="M14 11v6" />
-      <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
-    </svg>
   );
 }
 
@@ -271,9 +250,10 @@ function EmptyCart() {
       <p className="text-ink-60">카트가 비어 있어요.</p>
       <Link
         href="/"
-        className="mt-3 inline-block text-sm text-ink hover:underline"
+        className="mt-3 inline-flex items-center text-sm text-ink hover:underline"
+        style={{ gap: 6 }}
       >
-        ← 작품 둘러보러 가기
+        <ArrowLeft size={15} aria-hidden="true" /> 작품 둘러보러 가기
       </Link>
     </div>
   );
